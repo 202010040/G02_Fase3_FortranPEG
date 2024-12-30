@@ -1,154 +1,109 @@
-import Tokenizer from "./Tokenizador.js"
+import FortranTranslator from './Translator.js';
 
-export let gramatica;
-
-export const generarParser = (grammar) => {
-    gramatica = grammar;
-    const tokenizer = new Tokenizer()
+/** @typedef {import('../visitor/CST.js').Producciones} Produccion*/
+/** @typedef {import('../visitor/Visitor.js').default<string>} Visitor*/
+/**
+ *
+ * @param {Produccion[]} cst
+ */
+export const generateParser = (cst) => {
+    /** @type(Visitor) */
+    const translator = new FortranTranslator();
+    console.log(cst)
     return `
 module parser
-
-implicit none
-implicit none
-integer, private :: cursor
-character(len=:), allocatable, private :: input, expected
-
-contains
-
-    function parse(inputstr) result(res)
-        character(len=:), intent(in), allocatable :: inputstr
-        type(node), pointer :: res
-        input = inputstr
-        res => fortranPEG_${gramatica[0].id}()
-    end function parse
-
-    ${(() => {
-        let result = '';
-        do {
-            
-            result += grammar.map((produccion) => produccion.accept(tokenizer)).join('\n');
-        } while (tokenizer.pendingRules.length > 0);
-
-        return result;  
-    })()}
-
-    print *, "error lexico en col ", cursor, ', "'//input(cursor:cursor)//'"'
-    lexeme = "ERROR"
-
-
-
-function tolower(str) result(lower_str)
-        character(len=*), intent(in) :: str
-        character(len=len(str)) :: lower_str
-        integer :: i
-
-        lower_str = str 
-        do i = 1, len(str)
-            if (iachar(str(i:i)) >= iachar('A') .and. iachar(str(i:i)) <= iachar('Z')) then
-                lower_str(i:i) = achar(iachar(str(i:i)) + 32)
-            end if
-        end do
-end function tolower
-
-function replace_special_characters(input_string) result(output_string)
     implicit none
-    character(len=:), allocatable, intent(in) :: input_string
-    character(len=:), allocatable :: temp_string
-    character(len=:), allocatable :: output_string
-    integer :: i, length
+    integer, private :: cursor
+    character(len=:), allocatable, private :: input, expected
 
-    temp_string = ""
-    length = len(input_string)
+    contains
 
-    do i = 1, length
-        select case (ichar(input_string(i:i)))
-        case (10) ! Nueva línea
-            temp_string = temp_string // '\\n'
-        case (9)  ! Tabulación
-            temp_string = temp_string // '\\t'
-        case (13) ! Retorno de carro
-            temp_string = temp_string // '\\r'
-        case (32) ! Espacio
-            if (input_string(i:i) == " ") then
-                temp_string = temp_string // "_"
-            else
-                temp_string = temp_string // input_string(i:i)
-            end if
-        case default
-            temp_string = temp_string // input_string(i:i)
-        end select
-    end do
-    allocate(character(len=len(temp_string)) :: output_string)
-    output_string = temp_string
-end function
+    subroutine parse(str)
+        character(len=:), allocatable, intent(in) :: str
 
-end module parser 
+        input = str
+        cursor = 1
+        expected = ''
+        if (peg_${cst[0].id}()) then
+            print *, "Parsed input succesfully!"
+        else
+            call error()
+        end if
+    end subroutine parse
 
-`;
-}
+    subroutine error()
+        if (cursor > len(input)) then
+            print *, "Error: Expected '"//expected//"', but found <EOF>"
+            call exit(1)
+        end if
+        print *, "Error: Expected '"//expected//"', but found '"//input(cursor:cursor)//"'"
+        call exit(1)
+    end subroutine error
 
-export const renderQuantifierOption = (qty, condition, length) => {
-    var resultOneMore = `
-    initialCursor = cursor
-    do while (cursor <= len_trim(input) .and. (${condition}))
-        cursor = cursor + ${length}
-    end do
-    if (cursor > initialCursor) then
-        buffer = buffer // input(initialCursor:cursor-1) 
-        buffer = replace_special_characters(buffer)
-    else
-        cursor = initialCursor
-        concat_failed = .true.
-        buffer = ""
-    end if`      ;
+    ${cst.map((rules) => rules.accept(translator)).join('\n')}
 
-    var resultZeroMore = `
-    initialCursor = cursor
-    do while (cursor <= len_trim(input) .and. (${condition}))
-        cursor = cursor + ${length}
-    end do
-    if (cursor > initialCursor) then
-        buffer = buffer // input(initialCursor:cursor-1) 
-        buffer = replace_special_characters(buffer)
-    end if`      ;
+    function acceptString(str) result(accept)
+        character(len=*) :: str
+        logical :: accept
+        integer :: offset
 
-    var resultZeroOrOne = `
-    if (cursor <= len_trim(input) .and. (${condition})) then 
-        buffer = buffer // input(cursor:cursor + ${length - 1})
-        buffer = replace_special_characters(buffer)
-        cursor = cursor + ${length}
-    end if` ;
+        offset = len(str) - 1
+        if (str /= input(cursor:cursor + offset)) then
+            accept = .false.
+            expected = str
+            return
+        end if
+        cursor = cursor + len(str);
+        accept = .true.
+    end function acceptString
 
-    var one = `
-    if (cursor <= len_trim(input) .and. (${condition})) then 
-        buffer = buffer // input(cursor:cursor + ${length - 1})
-        buffer = replace_special_characters(buffer)
-        cursor = cursor + ${length}
-    else
-        concat_failed = .true.
-        buffer = ""
-    end if` ;
+    function acceptRange(bottom, top) result(accept)
+        character(len=1) :: bottom, top
+        logical :: accept
 
-    
-    switch (qty) {
-        case '+': return resultOneMore;
-        case '*': return resultZeroMore;
-        case '?': return resultZeroOrOne;
-        default: return one;
-    }   
-
-}
-
-export const renderAny = () => {
-    return `
-    ! Cualquier carácter es aceptado como lexema
-    if (cursor <= len_trim(input)) then
-        buffer = replace_special_characters(buffer)
+        if(.not. (input(cursor:cursor) >= bottom .and. input(cursor:cursor) <= top)) then
+            accept = .false.
+            return
+        end if
         cursor = cursor + 1
-    else
-        concat_failed = .true.
-        buffer = ""
-    end if
+        accept = .true.
+    end function acceptRange
+
+    function acceptSet(set) result(accept)
+        character(len=1), dimension(:) :: set
+        logical :: accept
+
+        if(.not. (findloc(set, input(cursor:cursor), 1) > 0)) then
+            accept = .false.
+            return
+        end if
+        cursor = cursor + 1
+        accept = .true.
+    end function acceptSet
+
+    function acceptPeriod() result(accept)
+        logical :: accept
+
+        if (cursor > len(input)) then
+            accept = .false.
+            expected = "<ANYTHING>"
+            return
+        end if
+        cursor = cursor + 1
+        accept = .true.
+    end function acceptPeriod
+
+    function acceptEOF() result(accept)
+        logical :: accept
+
+        if(.not. cursor > len(input)) then
+            accept = .false.
+            expected = "<EOF>"
+            return
+        end if
+        accept = .true.
+    end function acceptEOF
+end module parser
     `;
 }
 

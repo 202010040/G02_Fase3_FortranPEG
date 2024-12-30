@@ -1,112 +1,162 @@
+
 module parser
     implicit none
     integer, private :: cursor
-    character(len=:), allocatable, private :: input, expected ! En Expected se guarda lo que se espera recibir
+    character(len=:), allocatable, private :: input, expected
 
     contains
- 
+
     subroutine parse(str)
-        ! Reconoce entradas del tipo 
-        ! sum = num+ '+' num+ . / letra '+' letra
-        !
         character(len=:), allocatable, intent(in) :: str
+
         input = str
         cursor = 1
         expected = ''
-        if (sum()) then
+        if (peg_sum()) then
             print *, "Parsed input succesfully!"
-        else 
+        else
             call error()
         end if
     end subroutine parse
 
     subroutine error()
         if (cursor > len(input)) then
-           print *, "Error: Expected "//expected//", but found <EOF>"
-           call exit(1) 
+            print *, "Error: Expected '"//expected//"', but found <EOF>"
+            call exit(1)
         end if
-        print *, "Error: Expected "//expected//", but found '"//input(cursor:cursor)//"'" 
+        print *, "Error: Expected '"//expected//"', but found '"//input(cursor:cursor)//"'"
         call exit(1)
     end subroutine error
 
-    function sum() result(accept)
-        logical :: accept
-        integer :: i 
+    
+        function peg_sum() result(accept)
+            logical :: accept
+            integer :: i
 
-        accept = .false.
-
-        do i = 1, 3 ! Barrido de opciones for para los OR en las expresiones
+            accept = .false.
+            
+        do i = 0, 2
             select case(i)
-            case(1)
-            if (.not. num()) then
-                cycle
-            end if
-            do while (.not. cursor > len(input))
-                if (.not. num()) then
-                    exit
+                
+                        case(0)
+                            
+                if (.not. (peg_num())) then
+                    cycle
                 end if
-            end do
+                do while (.not. cursor > len(input))
+                    if (.not. (peg_num())) then
+                        exit
+                    end if
+                end do
+                
 
-            if (.not. acceptString('+')) then
-                cycle
-            end if
-
-            if (.not. num()) then
-                cycle
-            end if
-            do while (.not. cursor > len(input))
-                if (.not. num()) then
-                    exit
+                if (.not. (acceptString(' + '))) then
+                    cycle
                 end if
-            end do
+                
 
-            if (.not. acceptPeriod()) then
-                cycle
-            end if
-            exit
-            case(2)
-            if (.not. letra()) then
-                cycle
-            end if
+                if (.not. (peg_num())) then
+                    cycle
+                end if
+                do while (.not. cursor > len(input))
+                    if (.not. (peg_num())) then
+                        exit
+                    end if
+                end do
+                
 
-            if (.not. acceptString('+')) then
-                cycle
-            end if
+                if (.not. (acceptPeriod())) then
+                    cycle
+                end if
+                
+                            exit
+                        
 
-            if (.not. letra()) then
-                cycle
-            end if
-            exit
+                        case(1)
+                            
+                if (.not. (peg_letra())) then
+                    cycle
+                end if
+                
+
+                if (.not. (acceptString(' + '))) then
+                    cycle
+                end if
+                
+
+                if (.not. (peg_letra())) then
+                    cycle
+                end if
+                
+                            exit
+                        
             case default
                 return
             end select
         end do
-        ! Esta validacion debe ir solo con la regla inicial
-        if (.not. acceptEOF()) then
-            return
-        end if
-        accept = .true.
-    end function sum
+        
+            
+                    if (.not. acceptEOF()) then
+                        return
+                    end if
+                    
+            accept = .true.
+        end function peg_sum
+        
 
-    function num() result(accept)
-        logical :: accept
-        accept = .false.
-        if(.not. acceptRange('0', '9')) then
-            expected = "[0-9]"
-            return
-        end if
-        accept = .true.
-    end function num
+        function peg_num() result(accept)
+            logical :: accept
+            integer :: i
 
-    function letra() result(accept)
-        logical :: accept
-        accept = .false.
-        if(.not. acceptRange('a', 'z')) then
-            expected = "[A-Z]"
-            return
-        end if
-        accept = .true.
-    end function letra
+            accept = .false.
+            
+        do i = 0, 1
+            select case(i)
+                
+                        case(0)
+                            
+                if (.not. (acceptRange('0', '9'))) then
+                    cycle
+                end if
+                
+                            exit
+                        
+            case default
+                return
+            end select
+        end do
+        
+            
+            accept = .true.
+        end function peg_num
+        
+
+        function peg_letra() result(accept)
+            logical :: accept
+            integer :: i
+
+            accept = .false.
+            
+        do i = 0, 1
+            select case(i)
+                
+                        case(0)
+                            
+                if (.not. (acceptRange('a', 'z'))) then
+                    cycle
+                end if
+                
+                            exit
+                        
+            case default
+                return
+            end select
+        end do
+        
+            
+            accept = .true.
+        end function peg_letra
+        
 
     function acceptString(str) result(accept)
         character(len=*) :: str
@@ -114,12 +164,12 @@ module parser
         integer :: offset
 
         offset = len(str) - 1
-        if (str /= input(cursor:cursor + offset)) then ! Si la cadena actual es diferenta a la cadena aceptada
+        if (str /= input(cursor:cursor + offset)) then
             accept = .false.
             expected = str
             return
         end if
-        cursor = cursor + len(str)
+        cursor = cursor + len(str);
         accept = .true.
     end function acceptString
 
@@ -127,7 +177,7 @@ module parser
         character(len=1) :: bottom, top
         logical :: accept
 
-        if (.not. (input(cursor:cursor) >= bottom .and. input(cursor:cursor) <= top )) then
+        if(.not. (input(cursor:cursor) >= bottom .and. input(cursor:cursor) <= top)) then
             accept = .false.
             return
         end if
@@ -139,19 +189,20 @@ module parser
         character(len=1), dimension(:) :: set
         logical :: accept
 
-        if (.not. (findloc(set, input(cursor:cursor), 1) > 0 )) then ! Valida un conjunto de caracteres
+        if(.not. (findloc(set, input(cursor:cursor), 1) > 0)) then
             accept = .false.
             return
         end if
         cursor = cursor + 1
         accept = .true.
-    end function acceptSet    
+    end function acceptSet
 
     function acceptPeriod() result(accept)
         logical :: accept
+
         if (cursor > len(input)) then
             accept = .false.
-            expected = "<ANITHING>"
+            expected = "<ANYTHING>"
             return
         end if
         cursor = cursor + 1
@@ -160,7 +211,8 @@ module parser
 
     function acceptEOF() result(accept)
         logical :: accept
-        if (.not. cursor > len(input)) then
+
+        if(.not. cursor > len(input)) then
             accept = .false.
             expected = "<EOF>"
             return
@@ -168,3 +220,4 @@ module parser
         accept = .true.
     end function acceptEOF
 end module parser
+    

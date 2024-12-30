@@ -1,6 +1,6 @@
 import Visitor from './Visitor.js';
 import * as n from './CST.js';
-import { renderAny, renderQuantifierOption, renderRango } from './utils.js';
+import { renderAny, renderProduction, renderQuantifierOption, renderRango } from './utils.js';
 
 export default class Tokenizer extends Visitor {
     constructor() {
@@ -10,34 +10,20 @@ export default class Tokenizer extends Visitor {
         this.isFisrtRule = true; 
         this.nameProduction = '';
     }
-
+ 
 
     visitProducciones(node) {
-        if (this.isFisrtRule) {
-            this.isFisrtRule = false;  
-            let index = this.pendingRules.indexOf(node.id);
+        let produccionRenderizada = renderProduction(node, this);
+        return `
+        function fortranPEG_${node.id}() result(accept)
+            logical :: accept
+            integer :: i
 
-            if (index !== -1) {
-                this.pendingRules.splice(index, 1);
-            }
-            this.nameProduction = node.alias? node.alias : '"'+node.id+'"';
-            return node.expr.accept(this);
-        }
-
-
-        if (this.calledRules.includes(node.id) && this.pendingRules.includes(node.id)) {
-
-            let index = this.pendingRules.indexOf(node.id);
-
-            if (index !== -1) {
-                this.pendingRules.splice(index, 1);
-            }
-
-            this.nameProduction = node.alias? node.alias : '"'+node.id+'"';
-            return node.expr.accept(this);
-             
-        }
-        return '';
+            accept = .false.
+            ${produccionRenderizada}
+            accept = .true.
+        end function fortranPEG_${node.id}
+        `;
     }
     visitOpciones(node) {
         return node.exprs.map((expr) => expr.accept(this)).join('\n');
@@ -70,13 +56,19 @@ export default class Tokenizer extends Visitor {
     concat_failed = .false.
     buffer = ""
     ${resultadoGrupo}
+
+        `
+
+        /* 
+
+    Agregar para obtener el valor del lexema
     if (.not. concat_failed .and. len(buffer) > 0) then
         allocate( character(len=len(buffer)) :: lexeme)
         lexeme = buffer
         lexeme = lexeme // " -" // ${this.nameProduction}
         return
     end if
-        `
+        */
         }
         return resultadoFinal + resultadotmp;
     }

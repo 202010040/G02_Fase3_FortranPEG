@@ -1,6 +1,6 @@
 import * as monaco from 'https://cdn.jsdelivr.net/npm/monaco-editor@0.50.0/+esm';
 import { parse } from './parser/gramatica.js';
-import { generarParser } from './parser/visitor/utils.js';
+import {generateParser} from './parser/visitor/utils.js';
 
 export let ids = [];
 export let usos = [];
@@ -37,7 +37,7 @@ const analizar = () => {
             return;
         } else {
            
-            const fileContents = generarParser(cst);    
+            const fileContents = generateParser(cst);    
             const blob = new Blob([fileContents], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const button = document.getElementById('ButtomDownload');
@@ -51,6 +51,8 @@ const analizar = () => {
 
        
     } catch (e) {
+        console.log(e)
+        
         if (e.location === undefined) {
             salida.setValue(`Error: ${e.message}`);
         } else {
@@ -85,6 +87,7 @@ const analizar = () => {
                 },
             ]);
         }
+        
     }
 };
 
