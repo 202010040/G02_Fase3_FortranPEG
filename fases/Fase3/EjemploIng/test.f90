@@ -2,9 +2,10 @@ program test
 	use parser
 	implicit none
 	character(len=100) :: filename
-	character(len=:), allocatable :: input
+	character(len=:), allocatable :: inputstr
 	integer :: u, len
 	logical :: exists
+	type(node), pointer :: stack => null() 
 
 	if (command_argument_count() == 0) then
 		print *, "error: no input file"
@@ -16,9 +17,10 @@ program test
 	inquire(file=filename, exist=exists, size=len)
 	if (exists) then
 		open (1, file=filename, status='old', action='read', access='stream', form='unformatted')
-		allocate (character(len=len) :: input)
-        read (1) input
-		call parse(input)
+		allocate (character(len=len) :: inputstr)
+        read (1) inputstr
+		stack => parse(inputstr)
+		call show()
 	else
 		print *, "error: file is not present"
 		stop
@@ -27,3 +29,7 @@ program test
 	close(u)
 
 end program test
+
+
+
+

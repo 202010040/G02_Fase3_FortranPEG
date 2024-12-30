@@ -1,7 +1,6 @@
 import * as monaco from 'https://cdn.jsdelivr.net/npm/monaco-editor@0.50.0/+esm';
 import { parse } from './parser/gramatica.js';
-import Tokenizer from './parser/visitor/Tokenizador.js';
-import { ErrorReglas } from './parser/error.js';
+import { generarParser } from './parser/visitor/utils.js';
 
 export let ids = [];
 export let usos = [];
@@ -38,8 +37,7 @@ const analizar = () => {
             return;
         } else {
            
-            const tokenizer = new Tokenizer();
-            const fileContents = tokenizer.generateTokenizer(cst);
+            const fileContents = generarParser(cst);    
             const blob = new Blob([fileContents], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const button = document.getElementById('ButtomDownload');
