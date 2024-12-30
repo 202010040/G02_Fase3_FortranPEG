@@ -3,6 +3,7 @@ import * as CST from './CST.js';
 export default class FortranTranslator {
 
     visitProducciones(node) {
+        console.log('Produccion ', node)
         return `
         function peg_${node.id}() result(accept)
             logical :: accept
@@ -51,7 +52,7 @@ export default class FortranTranslator {
 
     visitExpresion(node) {
         const condition = node.expr.accept(this);
-        console.log('Condicion: ', condition)
+        //console.log('Condicion: ', condition)
         switch (node.qty) {
             case '+':
                 return `
@@ -78,7 +79,7 @@ export default class FortranTranslator {
     }
 
     visitCorchetes(node) {
-        console.log('Clases ', node)
+        //console.log('Clases ', node)
         let characterClass = [];
         const set = node.exprs
             .filter((char) => char instanceof CST.literalRango)
@@ -139,5 +140,12 @@ export default class FortranTranslator {
         ? `tolower(input(cursor:cursor)) == tolower(${literalFortran})`
         : `input(cursor:cursor) == ${literalFortran}`
         return "(" + condition + ")";
+    }
+
+    visitBloqueDeCodigo(node) {
+        if (node.start){ // Ignorar si es la primera produccion
+            return ''
+        }
+        return`semanticAction_${node.indice}()`
     }
 }

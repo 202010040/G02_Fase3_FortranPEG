@@ -3,11 +3,14 @@
     import { ErrorReglas } from './error.js';
     import { errores } from '../index.js'
     import * as n from '../parser/visitor/CST.js';
-}}
 
+    let indice = 0;
+}}
+ 
 gramatica
-  = _ prods:producciones+ _ {
+  = _ prods:(producciones / BloqueDeCodigo)+ _ {
     let duplicados = ids.filter((item, index) => ids.indexOf(item) !== index);
+
     if (duplicados.length > 0) {
         errores.push(new ErrorReglas("Regla duplicada: " + duplicados[0]));
     }
@@ -20,6 +23,7 @@ gramatica
     prods[0].start = true;
     return prods;
   }
+
 
 producciones
   = _ id:identificador _ alias:$(literales)? _ "=" _ expr:opciones (_";")? {
@@ -57,11 +61,9 @@ expresiones
   / "(" _ opciones:opciones _ ")"{
     return new n.grupo(opciones);
   }
-
   / exprs:corchetes isCase:"i"?{
     //console.log("Corchetes", exprs);
     return new n.Corchetes(exprs, isCase);
-
   }
   / "." {
     return new n.Any(true);
@@ -69,6 +71,10 @@ expresiones
   / "!."{
     return new n.finCadena();
   }
+  / bloque:BloqueDeCodigo {
+    return bloque; // Manejo del bloque de código
+  }
+
 
 // conteo = "|" parteconteo _ (_ delimitador )? _ "|"
 
@@ -150,6 +156,20 @@ numero = [0-9]+
 
 identificador = [_a-z]i[_a-z0-9]i* { return text() }
 
+BloqueDeCodigo
+  = "{" contenido:Codigo "}" {
+      indice += 1;
+      return new n.BloqueDeCodigo(indice, contenido); // Devuelve un nodo de tipo BloqueDeCodigo
+  }
+
+Codigo
+  = $(
+      (
+        !("{" / "}") .  // Cualquier carácter que no sea "{" o "}"
+      )+
+      /
+      "{" Codigo "}"   // Manejo de bloques anidados
+    )*
 
 _ = (Comentarios /[ \t\n\r])*
 

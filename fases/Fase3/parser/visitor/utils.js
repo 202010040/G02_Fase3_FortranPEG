@@ -1,4 +1,5 @@
 import FortranTranslator from './Translator.js';
+import * as CST from './CST.js';
 
 /** @typedef {import('../visitor/CST.js').Producciones} Produccion*/
 /** @typedef {import('../visitor/Visitor.js').default<string>} Visitor*/
@@ -40,8 +41,19 @@ module parser
         call exit(1)
     end subroutine error
 
+    ! -----------> Funciones que corresponden a producciones
     ${cst.map((rules) => rules.accept(translator)).join('\n')}
 
+    ! -----------> Funciones que corresponden a acciones semanticas
+
+    ${encontrarBloquesCodigo(cst)
+        .map((node) => `        
+        function semanticAction_${node.indice}() result(res)
+            ${node.contenido}
+        end function semanticAction_${node.indice}`)
+        .join('\n')}
+
+    ! -----------> Funciones predeterminadas
     function acceptString(str) result(accept)
         character(len=*) :: str
         logical :: accept
@@ -116,3 +128,26 @@ export const renderRango = (node) => {
 
     return "(" + condition + ")";
 }
+
+const encontrarBloquesCodigo = (node) => {
+    const blocks = [];
+    
+    if (node instanceof CST.BloqueDeCodigo) {
+      blocks.push(node);
+    }
+    
+    Object.values(node).forEach(child => {
+      if (child && typeof child === 'object') {
+        if (Array.isArray(child)) {
+          child.forEach(item => {
+            blocks.push(...encontrarBloquesCodigo(item));
+          });
+        } else {
+          blocks.push(...encontrarBloquesCodigo(child));
+        }
+      }
+    });
+    
+    return blocks;
+  };
+  
