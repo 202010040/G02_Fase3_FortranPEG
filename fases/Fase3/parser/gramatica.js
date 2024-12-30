@@ -468,7 +468,7 @@ function peg$parse(input, options) {
     return res;
   }
 
-  function peg$fail(expected) {
+  function peg$fail(expected) { 
     if (peg$currPos < peg$maxFailPos) { return; }
 
     if (peg$currPos > peg$maxFailPos) {
