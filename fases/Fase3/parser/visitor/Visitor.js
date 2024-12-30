@@ -12,4 +12,5 @@ export default class Visitor {
 	visitidRel(node) {}
 	visitgrupo(node) {}
 	visitfinCadena(node) {}
+	visitBloqueDeCodigo(node) {}
 }

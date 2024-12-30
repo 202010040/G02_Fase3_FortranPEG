@@ -157,4 +157,15 @@ export class finCadena extends Node {
         return visitor.visitfinCadena(this);
     }
 }
+
+export class BloqueDeCodigo extends Node {
+    constructor(contenido) {
+        super(); // Llama al constructor de la clase base Node
+        this.contenido = contenido; // Almacena el contenido del bloque de código
+    }
+
+    accept(visitor) {
+        return visitor.visitBloqueDeCodigo(this); // Llama al método correspondiente en el visitante
+    }
+}
     
