@@ -73,6 +73,15 @@ export default class FortranTranslator {
                 end do
                 ${node.bloque !== null ? node.bloque.accept(this) : ''}
                 `;
+            case '*':
+                return `
+                do while (cursor <= len(input))
+                    if (.not. (${condition})) then
+                        exit
+                    end if
+                end do
+                ${node.bloque !== null ? node.bloque.accept(this) : ''}
+                `;                
             default:
                 return `
                 if (cursor > len(input) .or. .not. (${condition})) then
