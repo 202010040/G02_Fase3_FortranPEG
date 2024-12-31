@@ -7,6 +7,18 @@ import * as CST from './CST.js';
  *
  * @param {Produccion[]} cst
  */
+
+function splitFortranCode(code) {
+    const containsRegex = /\bcontains\b/i;
+    const parts = code.split(containsRegex);
+  
+    return {
+      beforeContains: parts[0]?.trim() || "",
+      afterContains: parts[1]?.trim() || "",
+    };
+  }
+
+
 export const generateParser = (cst) => {
     /** @type(Visitor) */
     const translator = new FortranTranslator();
@@ -17,7 +29,11 @@ module parser
     integer, private :: cursor
     character(len=:), allocatable, private :: input, expected
 
+    ${cst.inicio ? splitFortranCode(cst.inicio.contenido).beforeContains : ''}
+
     contains
+
+    ${cst.inicio ? splitFortranCode(cst.inicio.contenido).afterContains : ''}
 
     subroutine parse(str)
         character(len=:), allocatable, intent(in) :: str
