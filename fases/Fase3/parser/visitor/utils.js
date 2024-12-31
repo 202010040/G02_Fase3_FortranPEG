@@ -60,14 +60,15 @@ module parser
         integer :: offset
 
         offset = len(str) - 1
-        if (str /= input(cursor:cursor + offset)) then
+        if (cursor + offset > len(input) .or. str /= input(cursor:cursor + offset)) then
             accept = .false.
             expected = str
-            return
+        else
+            cursor = cursor + len(str)
+            accept = .true.
         end if
-        cursor = cursor + len(str);
-        accept = .true.
     end function acceptString
+
 
     function acceptRange(bottom, top) result(accept)
         character(len=1) :: bottom, top
@@ -108,7 +109,7 @@ module parser
     function acceptEOF() result(accept)
         logical :: accept
 
-        if(.not. cursor > len(input)) then
+        if(.not. (cursor > len(input))) then
             accept = .false.
             expected = "<EOF>"
             return

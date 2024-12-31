@@ -3,13 +3,18 @@ import * as CST from './CST.js';
 export default class FortranTranslator {
 
     visitProducciones(node) {
-        console.log('Produccion ', node)
         return `
         function peg_${node.id}() result(accept)
             logical :: accept
             integer :: i
-
+            expected = "${node.id}"
             accept = .false.
+    
+            if (len(input) == 0) then
+                expected = "<NON-EMPTY INPUT>"
+                return
+            end if
+    
             ${node.expr.accept(this)}
             ${
                 node.start 
@@ -24,6 +29,7 @@ export default class FortranTranslator {
         end function peg_${node.id}
         `;
     }
+    
 
     visitOpciones(node) {
         const template = `
@@ -52,11 +58,10 @@ export default class FortranTranslator {
 
     visitExpresion(node) {
         const condition = node.expr.accept(this);
-        //console.log('Condicion: ', condition)
         switch (node.qty) {
             case '+':
                 return `
-                if (.not. (${condition})) then
+                if (cursor > len(input) .or. .not. (${condition})) then
                     cycle
                 end if
                 do while (cursor <= len(input))
@@ -67,16 +72,18 @@ export default class FortranTranslator {
                 `;
             default:
                 return `
-                if (.not. (${condition})) then
+                if (cursor > len(input) .or. .not. (${condition})) then
                     cycle
                 end if
                 `;
         }
     }
+    
 
     visitString(node) {
         return `acceptString('${node.val}')`;
     }
+    
 
     visitCorchetes(node) {
         //console.log('Clases ', node)
@@ -96,9 +103,10 @@ export default class FortranTranslator {
         return characterClass.join(' .or. '); // acceptSet(['a','b','c']) .or. acceptRange('0','9') .or. acceptRange('A','Z')
     }
 
-    visitrango(node) { 
-        return `acceptRange('${node.start}', '${node.end}')`;
+    visitrango(node) {
+        return ` acceptRange('${node.start}', '${node.end}') `;
     }
+    
 
     visitIdentificador(node) {
         return `peg_${node.id}()`;
@@ -117,8 +125,9 @@ export default class FortranTranslator {
     }
 
     visitFin(node) {
-        return 'acceptEOF()';
+        return `acceptEOF()`;
     }
+    
 
     visitgrupo(node) {
         node.expr.qty = node.qty
@@ -127,20 +136,24 @@ export default class FortranTranslator {
 
     visitliteralRango(node) {
         const literalMap = {
-            "\\t": "char(9)",  // Tabulación
-            "\\n": "char(10)", // Nueva línea
-            " ": "char(32)",   // Espacio
-            "\\r": "char(13)",  // Retorno de carro
+            "\\t": "char(9)",
+            "\\n": "char(10)",
+            " ": "char(32)",
+            "\\r": "char(13)"
         };
-    
-        // Verifica si el literal es especial y tradúcelo, de lo contrario usa comillas
         const literalFortran = literalMap[node.val] || `"${node.val}"`;
     
-        const condition = node.isCase
-        ? `tolower(input(cursor:cursor)) == tolower(${literalFortran})`
-        : `input(cursor:cursor) == ${literalFortran}`
-        return "(" + condition + ")";
+        return `
+        if (cursor > len(input)) then
+            accept = .false.
+        else
+            accept = (${node.isCase 
+                ? `tolower(input(cursor:cursor)) == tolower(${literalFortran})`
+                : `input(cursor:cursor) == ${literalFortran}`})
+        end if
+        `;
     }
+    
 
     visitBloqueDeCodigo(node) {
         if (node.start){ // Ignorar si es la primera produccion

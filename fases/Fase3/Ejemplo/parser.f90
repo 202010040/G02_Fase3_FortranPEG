@@ -1,3 +1,4 @@
+
 module parser
     implicit none
     integer, private :: cursor
@@ -8,15 +9,11 @@ module parser
     subroutine parse(str)
         character(len=:), allocatable, intent(in) :: str
 
-        input = trim(str)
+        input = str
         cursor = 1
         expected = ''
         if (peg_sum()) then
-            if (acceptEOF()) then
-                print *, "Parsed input successfully!"
-            else
-                call error()
-            end if
+            print *, "Parsed input succesfully!"
         else
             call error()
         end if
@@ -25,40 +22,172 @@ module parser
     subroutine error()
         if (cursor > len(input)) then
             print *, "Error: Expected '"//expected//"', but found <EOF>"
-        else
-            print *, "Error: Expected '"//expected//"', but found '"//input(cursor:cursor)//"'"
+            call exit(1)
         end if
+        print *, "Error: Expected '"//expected//"', but found '"//input(cursor:cursor)//"'"
         call exit(1)
     end subroutine error
 
-    function peg_sum() result(accept)
-        logical :: accept
+    ! -----------> Funciones que corresponden a producciones
+    
+        function peg_sum() result(accept)
+            logical :: accept
+            integer :: i
+            expected = "sum"
+            accept = .false.
+    
+            if (len(input) == 0) then
+                expected = "<NON-EMPTY INPUT>"
+                return
+            end if
+    
+            
+        do i = 0, 2
+            select case(i)
+                
+                        case(0)
+                            
+                if (cursor > len(input) .or. .not. (peg_num())) then
+                    cycle
+                end if
+                do while (cursor <= len(input))
+                    if (.not. (peg_num())) then
+                        exit
+                    end if
+                end do
+                
 
-        accept = .false.
+                if (cursor > len(input) .or. .not. (acceptString('+'))) then
+                    cycle
+                end if
+                
 
-        ! Case 1: num + '+' num + '.'
-        if (peg_num() .and. acceptString('+') .and. peg_num() .and. acceptPeriod()) then
+                if (cursor > len(input) .or. .not. (peg_num())) then
+                    cycle
+                end if
+                do while (cursor <= len(input))
+                    if (.not. (peg_num())) then
+                        exit
+                    end if
+                end do
+                
+
+                if (cursor > len(input) .or. .not. (acceptPeriod())) then
+                    cycle
+                end if
+                
+                            exit
+                        
+
+                        case(1)
+                            
+                if (cursor > len(input) .or. .not. (peg_letra())) then
+                    cycle
+                end if
+                
+
+                if (cursor > len(input) .or. .not. (acceptString('+'))) then
+                    cycle
+                end if
+                
+
+                if (cursor > len(input) .or. .not. (peg_letra())) then
+                    cycle
+                end if
+                
+                            exit
+                        
+            case default
+                return
+            end select
+        end do
+        
+            
+                    if (.not. acceptEOF()) then
+                        return
+                    end if
+                    
             accept = .true.
-            return
-        end if
+        end function peg_sum
+        
 
-        ! Case 2: letra + '+' letra
-        if (peg_letra() .and. acceptString('+') .and. peg_letra()) then
+        function peg_num() result(accept)
+            logical :: accept
+            integer :: i
+            expected = "num"
+            accept = .false.
+    
+            if (len(input) == 0) then
+                expected = "<NON-EMPTY INPUT>"
+                return
+            end if
+    
+            
+        do i = 0, 1
+            select case(i)
+                
+                        case(0)
+                            
+                if (cursor > len(input) .or. .not. ( acceptRange('0', '9') )) then
+                    cycle
+                end if
+                
+                            exit
+                        
+            case default
+                return
+            end select
+        end do
+        
+            
             accept = .true.
-            return
-        end if
-    end function peg_sum
+        end function peg_num
+        
 
-    function peg_num() result(accept)
-        logical :: accept
-        accept = acceptRange('0', '9')
-    end function peg_num
+        function peg_letra() result(accept)
+            logical :: accept
+            integer :: i
+            expected = "letra"
+            accept = .false.
+    
+            if (len(input) == 0) then
+                expected = "<NON-EMPTY INPUT>"
+                return
+            end if
+    
+            
+        do i = 0, 1
+            select case(i)
+                
+                        case(0)
+                            
+                if (cursor > len(input) .or. .not. ( acceptRange('a', 'z') )) then
+                    cycle
+                end if
+                
+                            exit
+                        
+            case default
+                return
+            end select
+        end do
+        
+            
+            accept = .true.
+        end function peg_letra
+        
 
-    function peg_letra() result(accept)
-        logical :: accept
-        accept = acceptRange('a', 'z')
-    end function peg_letra
+    ! -----------> Funciones que corresponden a acciones semanticas
 
+            
+        function semanticAction_2() result(res)
+            
+    logical :: res
+    res = .true.  ! Reemplaza con lógica real si es necesario
+    
+        end function semanticAction_2
+
+    ! -----------> Funciones predeterminadas
     function acceptString(str) result(accept)
         character(len=*) :: str
         logical :: accept
@@ -74,32 +203,52 @@ module parser
         end if
     end function acceptString
 
+
     function acceptRange(bottom, top) result(accept)
         character(len=1) :: bottom, top
         logical :: accept
 
-        if (cursor > len(input) .or. input(cursor:cursor) < bottom .or. input(cursor:cursor) > top) then
+        if(.not. (input(cursor:cursor) >= bottom .and. input(cursor:cursor) <= top)) then
             accept = .false.
-        else
-            cursor = cursor + 1
-            accept = .true.
+            return
         end if
+        cursor = cursor + 1
+        accept = .true.
     end function acceptRange
+
+    function acceptSet(set) result(accept)
+        character(len=1), dimension(:) :: set
+        logical :: accept
+
+        if(.not. (findloc(set, input(cursor:cursor), 1) > 0)) then
+            accept = .false.
+            return
+        end if
+        cursor = cursor + 1
+        accept = .true.
+    end function acceptSet
 
     function acceptPeriod() result(accept)
         logical :: accept
 
-        if (cursor > len(input) .or. input(cursor:cursor) /= '.') then
+        if (cursor > len(input)) then
             accept = .false.
-            expected = "."
-        else
-            cursor = cursor + 1
-            accept = .true.
+            expected = "<ANYTHING>"
+            return
         end if
+        cursor = cursor + 1
+        accept = .true.
     end function acceptPeriod
 
     function acceptEOF() result(accept)
         logical :: accept
-        accept = (cursor > len(input))
+
+        if(.not. (cursor > len(input))) then
+            accept = .false.
+            expected = "<EOF>"
+            return
+        end if
+        accept = .true.
     end function acceptEOF
 end module parser
+    
