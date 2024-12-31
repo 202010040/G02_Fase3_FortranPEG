@@ -3,8 +3,44 @@ module parser
     implicit none
     integer, private :: cursor
     character(len=:), allocatable, private :: input, expected
+    
+    ! Declaraciones de tipos necesarios
+    logical :: semanticExp_2
 
+    ! Codigo antes de contains autogenerado INICIO
+    type :: node	
+		integer :: value
+		type(node), pointer :: next => null()
+	end type node
+
+	type(node), pointer :: head => null()
+    ! Codigo antes de contains autogenerado FIN
     contains
+    ! Codigo despues de contains autogenerado INICIO
+    subroutine push(value)
+		integer, intent(in) :: value
+	  	type(node), pointer :: tmp
+      		if (associated(head)) then
+        		allocate(tmp)
+	      		tmp%value = value
+	      		tmp%next => head
+	      		head => tmp
+      		else
+        		allocate(head)
+        		head%value = value
+        		head%next => null()
+    		end if	
+  	end subroutine push
+	
+	subroutine show()
+	  	type(node), pointer :: tmp
+	  	tmp => head
+	  	do while (associated(tmp))
+		  	print *, tmp%value
+		  	tmp => tmp%next
+	  	end do
+  	end subroutine show
+    ! Codigo despues de contains autogenerado FIN
 
     subroutine parse(str)
         character(len=:), allocatable, intent(in) :: str
@@ -56,10 +92,12 @@ module parser
                     end if
                 end do
                 
+                
 
                 if (cursor > len(input) .or. .not. (acceptString('+'))) then
                     cycle
                 end if
+                
                 
 
                 if (cursor > len(input) .or. .not. (peg_num())) then
@@ -71,10 +109,12 @@ module parser
                     end if
                 end do
                 
+                
 
                 if (cursor > len(input) .or. .not. (acceptPeriod())) then
                     cycle
                 end if
+                
                 
                             exit
                         
@@ -85,15 +125,18 @@ module parser
                     cycle
                 end if
                 
+                
 
                 if (cursor > len(input) .or. .not. (acceptString('+'))) then
                     cycle
                 end if
                 
+                
 
                 if (cursor > len(input) .or. .not. (peg_letra())) then
                     cycle
                 end if
+                
                 
                             exit
                         
@@ -132,6 +175,9 @@ module parser
                     cycle
                 end if
                 
+        semanticExp_2 =  semanticAction_2()
+        
+                
                             exit
                         
             case default
@@ -164,6 +210,7 @@ module parser
                 if (cursor > len(input) .or. .not. ( acceptRange('a', 'z') )) then
                     cycle
                 end if
+                
                 
                             exit
                         

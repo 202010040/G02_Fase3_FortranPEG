@@ -28,12 +28,19 @@ module parser
     implicit none
     integer, private :: cursor
     character(len=:), allocatable, private :: input, expected
+    
+    ! Declaraciones de tipos necesarios
+    ${encontrarBloquesCodigo(cst.producciones)
+    .map((node) => `logical :: semanticExp_${node.indice}`)
+    .join('\n')}
 
+    ! Codigo antes de contains autogenerado INICIO
     ${cst.inicio ? splitFortranCode(cst.inicio.contenido).beforeContains : ''}
-
+    ! Codigo antes de contains autogenerado FIN
     contains
-
+    ! Codigo despues de contains autogenerado INICIO
     ${cst.inicio ? splitFortranCode(cst.inicio.contenido).afterContains : ''}
+    ! Codigo despues de contains autogenerado FIN
 
     subroutine parse(str)
         character(len=:), allocatable, intent(in) :: str

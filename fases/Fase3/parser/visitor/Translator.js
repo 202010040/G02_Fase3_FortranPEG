@@ -58,6 +58,8 @@ export default class FortranTranslator {
 
     visitExpresion(node) {
         const condition = node.expr.accept(this);
+        let a = node.bloque !== null ? node.bloque.accept(this) : ''
+        console.log('Bloque, ' , a)
         switch (node.qty) {
             case '+':
                 return `
@@ -69,12 +71,14 @@ export default class FortranTranslator {
                         exit
                     end if
                 end do
+                ${node.bloque !== null ? node.bloque.accept(this) : ''}
                 `;
             default:
                 return `
                 if (cursor > len(input) .or. .not. (${condition})) then
                     cycle
                 end if
+                ${node.bloque  !== null ? node.bloque.accept(this) : ''}
                 `;
         }
     }
@@ -159,6 +163,8 @@ export default class FortranTranslator {
         if (node.start){ // Ignorar si es la primera produccion
             return ''
         }
-        return`semanticAction_${node.indice}()`
+        return`
+        semanticExp_${node.indice} =  semanticAction_${node.indice}()
+        `
     }
 }
