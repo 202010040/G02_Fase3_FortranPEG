@@ -42,11 +42,12 @@ export class Union extends Node {
     
 export class Expresion extends Node {
 
-    constructor(expr, label, qty) {
+    constructor(expr, label, qty, bloque) {
         super();
         this.expr = expr;
 		this.label = label;
 		this.qty = qty;
+        this.bloque = bloque;
     }
 
     accept(visitor) {

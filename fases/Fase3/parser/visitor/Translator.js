@@ -59,7 +59,7 @@ export default class FortranTranslator {
                 if (.not. (${condition})) then
                     cycle
                 end if
-                do while (.not. cursor > len(input))
+                do while (cursor <= len(input))
                     if (.not. (${condition})) then
                         exit
                     end if

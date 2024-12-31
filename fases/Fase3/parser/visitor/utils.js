@@ -25,7 +25,7 @@ module parser
         input = str
         cursor = 1
         expected = ''
-        if (peg_${cst[0].id}()) then
+        if (peg_${cst.producciones[0].id}()) then
             print *, "Parsed input succesfully!"
         else
             call error()
@@ -42,11 +42,11 @@ module parser
     end subroutine error
 
     ! -----------> Funciones que corresponden a producciones
-    ${cst.map((rules) => rules.accept(translator)).join('\n')}
+    ${cst.producciones.map((rules) => rules.accept(translator)).join('\n')}
 
     ! -----------> Funciones que corresponden a acciones semanticas
 
-    ${encontrarBloquesCodigo(cst)
+    ${encontrarBloquesCodigo(cst.producciones)
         .map((node) => `        
         function semanticAction_${node.indice}() result(res)
             ${node.contenido}

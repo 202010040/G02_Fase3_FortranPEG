@@ -8,22 +8,23 @@
 }}
  
 gramatica
-  = _ prods:(producciones / BloqueDeCodigo)+ _ {
+  = _ inicio:BloqueDeCodigo? _ prods:(producciones)+ _ {
     let duplicados = ids.filter((item, index) => ids.indexOf(item) !== index);
 
     if (duplicados.length > 0) {
         errores.push(new ErrorReglas("Regla duplicada: " + duplicados[0]));
     }
 
-    // Validar que todos los usos están en ids
     let noEncontrados = usos.filter(item => !ids.includes(item));
     if (noEncontrados.length > 0) {
         errores.push(new ErrorReglas("Regla no encontrada: " + noEncontrados[0]));
     }
     prods[0].start = true;
-    return prods;
+    return {
+      inicio: inicio,
+      producciones: prods
+    };
   }
-
 
 producciones
   = _ id:identificador _ alias:$(literales)? _ "=" _ expr:opciones (_";")? {
@@ -42,15 +43,11 @@ union
   }
 
 expresion
-  = label:$(etiqueta/varios)? _ expr:expresiones _ qty:$([?+*]/conteo)? {
-    return new n.Expresion(expr, label, qty);
+  = label:$(etiqueta/varios)? _ expr:expresionSinCodigo _ qty:$([?+*]/conteo)? bloque:(BloqueDeCodigo)? {
+    return new n.Expresion(expr, label, qty, bloque);
   }
 
-etiqueta = ("@")? _ id:identificador _ ":" (varios)?
-
-varios = ("!"(!".") /"$"/"@"/"&")
-
-expresiones
+expresionSinCodigo
   = id:identificador {
     usos.push(id);
     return new n.idRel(id);
@@ -62,7 +59,6 @@ expresiones
     return new n.grupo(opciones);
   }
   / exprs:corchetes isCase:"i"?{
-    //console.log("Corchetes", exprs);
     return new n.Corchetes(exprs, isCase);
   }
   / "." {
@@ -71,41 +67,29 @@ expresiones
   / "!."{
     return new n.finCadena();
   }
-  / bloque:BloqueDeCodigo {
-    return bloque; // Manejo del bloque de código
-  }
 
+etiqueta = ("@")? _ id:identificador _ ":" (varios)?
 
-// conteo = "|" parteconteo _ (_ delimitador )? _ "|"
+varios = ("!"(!".") /"$"/"@"/"&")
 
 conteo = "|" _ (numero / id:identificador) _ "|"
         / "|" _ (numero / id:identificador)? _ ".." _ (numero / id2:identificador)? _ "|"
         / "|" _ (numero / id:identificador)? _ "," _ opciones _ "|"
         / "|" _ (numero / id:identificador)? _ ".." _ (numero / id2:identificador)? _ "," _ opciones _ "|"
 
-// parteconteo = identificador
-//             / [0-9]? _ ".." _ [0-9]?
-// 			/ [0-9]
-
-// delimitador =  "," _ expresion
-
-// Regla principal que analiza corchetes con contenido
 corchetes
     = "[" contenido:(rango / contenido)+ "]" {
         return contenido;
     }
 
-// Regla para validar un rango como [A-Z]
 rango
     = inicio:$caracter "-" fin:$caracter {
         return new  n.rango(inicio, fin);
     }
 
-// Regla para caracteres individuales
 caracter
     = [a-zA-Z0-9_ ] 
 
-// Coincide con cualquier contenido que no incluya "]"
 contenido
     = contenido: (corchete / @$texto){
         return new n.literalRango(contenido);
@@ -147,32 +131,31 @@ escape = "'"
 
 secuenciaFinLinea = "\r\n" / "\n" / "\r" / "\u2028" / "\u2029"
 
-// literales = 
-//     "\"" [^"]* "\""
-//     / "'" [^']* "'"
-    
-
 numero = [0-9]+
 
 identificador = [_a-z]i[_a-z0-9]i* { return text() }
 
+_ "espacios"
+  = ([ \t\n\r] / Comentarios)*
+
 BloqueDeCodigo
-  = "{" contenido:Codigo "}" {
+  = "{" contenido:ContenidoCodigo "}" {
       indice += 1;
-      return new n.BloqueDeCodigo(indice, contenido); // Devuelve un nodo de tipo BloqueDeCodigo
+      return new n.BloqueDeCodigo(indice, contenido);
   }
 
-Codigo
-  = $(
-      (
-        !("{" / "}") .  // Cualquier carácter que no sea "{" o "}"
-      )+
-      /
-      "{" Codigo "}"   // Manejo de bloques anidados
-    )*
+ContenidoCodigo
+  = $(ContenidoCodigoInterno)*
 
-_ = (Comentarios /[ \t\n\r])*
+ContenidoCodigoInterno
+  = !("{" / "}") (ComentarioCodigo / CaracterCodigo)
+  / "{" ContenidoCodigoInterno* "}"
 
+ComentarioCodigo
+  = "!" [^\n]* "\n"
+
+CaracterCodigo
+  = [^\n] / "\n"
 
 Comentarios = 
     "//" [^\n]* 
