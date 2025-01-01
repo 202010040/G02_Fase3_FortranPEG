@@ -54,103 +54,148 @@ contains
             nullify(head)
         end if
         
+        ! Asignamos la entrada y inicializamos el cursor
         input = str
         cursor = 1
+        
+        ! Procesamos la entrada
         res => parses()
     end function parse
+        
 
     ! Función parses modificada
     function parses() result(res)
         type(node), pointer :: res
-        integer, allocatable :: s0(:)
-        integer, allocatable :: s1(:)
-        integer :: s2, len
-
-        savePoint = cursor
-        allocate(s0(0))
-        s2 = parsee()
+        integer :: expr_0_0
+        integer :: i
+        integer, allocatable :: values(:)
+        logical :: continue_parsing
         
-        do while (s2 /= -999)
-            len = size(s0) + 1
-            if (allocated(s1)) deallocate(s1)
-            allocate(s1(len))
-            s1(1:size(s0)) = s0
-            s1(len) = s2
-            if (allocated(s0)) deallocate(s0)
-            allocate(s0(len))
-            s0(1:len) = s1
-            
-            savePoint = cursor
-            s2 = parsee()
+        savePoint = cursor
+        allocate(values(0))
+        
+        ! Loop principal para procesar múltiples números
+        continue_parsing = .true.
+        do while (continue_parsing)
+            do i = 0, 1
+                select case(i)
+                case(0)
+                    cursor = savePoint
+                    
+                    expr_0_0 = parsee()
+                    
+                    ! Agregar valor al array
+                    values = [values, expr_0_0]
+                    
+                    ! Guardar punto para próxima iteración
+                    savePoint = cursor
+                    
+                    ! Verificar si llegamos al final
+                    if (acceptEOF()) then
+                        continue_parsing = .false.
+                        res => f0(values)
+                        exit
+                    end if
+                    
+                    exit
+                    
+                case default
+                    continue_parsing = .false.
+                    if (size(values) > 0) then
+                        res => f0(values)
+                    else
+                        call pegError()
+                    end if
+                end select
+            end do
         end do
         
-        if (size(s0) > 0) then
-            res => f0(s0)
-        else
-            res => null()
-        end if
+        if (allocated(values)) deallocate(values)
     end function parses
+        
 
-    ! Función parsee
     function parsee() result(res)
         integer :: res
-        integer :: s1
-        character(len=:), allocatable :: s2
+        integer :: expr_0_0
+        character(len=:), allocatable :: expr_0_1
+        integer :: i
         
         savePoint = cursor
-        s1 = parsenum()
-        if (s1 /= -999) then
-            s2 = parsesep()
-            if (s2 /= "") then
-                res = f1(s1)
-                return
-            end if
-        end if
-        cursor = savePoint
-        res = -999
+        
+        do i = 0, 1
+            select case(i)
+            case(0)
+                cursor = savePoint
+                
+                expr_0_0 = parsenum()
+                expr_0_1 = parsesep()
+                ! if (expr_0_1 == "") cycle
+                
+                res = f1(expr_0_0)
+                exit
+                
+            case default
+                call pegError()
+            end select
+        end do
     end function parsee
-
-    ! Función parsenum
+    
     function parsenum() result(res)
         integer :: res
-        character(len=:), allocatable :: s0
+        character(len=:), allocatable :: expr_0_0
+        integer :: i
         
-        if (cursor > len(input)) then
-            res = -999
-            return
-        end if
+        savePoint = cursor
         
-        lexemeStart = cursor
-        if (.not. acceptRange('0', '9')) then
-            res = -999
-            return
-        end if
-        
-        do while (cursor <= len(input))
-            if (.not. acceptRange('0', '9')) exit
+        do i = 0, 1
+            select case(i)
+            case(0)
+                cursor = savePoint
+                
+                lexemeStart = cursor
+                if (.not. acceptRange('0', '9')) cycle
+                
+                do while (cursor <= len(input))
+                    if (.not. acceptRange('0', '9')) exit
+                end do
+                
+                expr_0_0 = consumeInput()
+                res = f2(expr_0_0)
+                exit
+                
+            case default
+                call pegError()
+            end select
         end do
-        
-        s0 = consumeInput()
-        res = f2(s0)
     end function parsenum
+              
 
     ! Función parsesep
     function parsesep() result(res)
         character(len=:), allocatable :: res
+        character(len=:), allocatable :: expr_0_0
+        integer :: i
+    
+        savePoint = cursor
         
-        if (cursor > len(input)) then
-            res = ""
-            return
-        end if
-        
-        lexemeStart = cursor
-        if (.not. acceptString(char(10))) then  ! Cambio explícito a char(10) para \n
-            res = ""
-            return
-        end if
-        
-        res = consumeInput()
+        do i = 0, 1
+            select case(i)
+            case(0)
+                cursor = savePoint
+                lexemeStart = cursor
+                
+                ! Intenta aceptar el salto de línea
+                if (.not. acceptString(char(10))) cycle
+                expr_0_0 = consumeInput()
+                res = expr_0_0
+                exit
+                
+            case default
+                call pegError()
+            end select
+        end do
     end function parsesep
+         
 
     ! Funciones auxiliares
     function acceptString(str) result(accept)
@@ -177,10 +222,26 @@ contains
         accept = .true.
     end function acceptRange
 
+    function acceptEOF() result(accept)
+        logical :: accept
+
+        if(.not. cursor > len(input)) then
+            accept = .false.
+            return
+        end if
+        accept = .true.
+    end function acceptEOF
+
     function consumeInput() result(substr)
         character(len=:), allocatable :: substr
         substr = input(lexemeStart:cursor - 1)
     end function consumeInput
+    
+    subroutine pegError()
+        print '(A,I1,A)', "Error at ", cursor, ": '"//input(cursor:cursor)//"'"
+
+        call exit(1)
+    end subroutine pegError
 
     ! Funciones de conversión
     function intToStr(int) result(cast)

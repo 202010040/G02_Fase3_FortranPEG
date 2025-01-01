@@ -1,197 +1,307 @@
-module parser 
+module parser
+	implicit none
+	character(len=:), allocatable, private :: input
+	integer, private :: savePoint, lexemeStart, cursor
 
-	! initial code from FortranPEG grammar
-    	type :: node	
+	interface toStr
+		module procedure intToStr
+		module procedure strToStr
+	end interface
+	
+	
+	type :: node	
 		integer :: value
 		type(node), pointer :: next => null()
 	end type node
 
 	type(node), pointer :: head => null()
 
-    	! global var for input
-	character(len=:), allocatable :: input
-
-contains
-
-! initial code from FortranPEG grammar
-subroutine push(value)
-	integer, intent(in) :: value
-	type(node), pointer :: tmp
-    	if (associated(head)) then
-        	allocate(tmp)
-	    	tmp%value = value
-	    	tmp%next => head
-	    	head => tmp
-    	else
-        	allocate(head)
-        	head%value = value
-        	head%next => null()
-    	end if	
-end subroutine push
-
-subroutine show()
-	type(node), pointer :: tmp
-	tmp => head
-	do while (associated(tmp))
-		print *, tmp%value
-		tmp => tmp%next
-	end do
-end subroutine show
-
-
-! parse generated
-function parse(inputstr) result(res)
-	character(len=:), intent(in), allocatable :: inputstr
-	type(node), pointer :: res
-    	input = inputstr
-    	
-     	! call initial rule s function
-    	res => parses()
-end function parse
-
-! rule function s = n:e*
-function parses() result(res)
-	! type defined by user
-	type(node), pointer :: res
-
-    	! expressions array, type infered from rule e
-	integer, allocatable :: s0(:)
-	integer, allocatable :: s1(:)
-
-    	! infered type from rule e
-	integer :: s2
-
-	integer :: len
-    	allocate(s0(0))
-	s2 = -999
-	s2 = parsee()
-	do while (s2 /= -999)
-        	! rezise array and set s2
-        	len = size(s0) + 1
-        	if (allocated(s1)) deallocate(s1)
-        	allocate(s1(len))
-        	s1(1:size(s0)) = s0
-        	s1(len) = s2
-        	if (allocated(s0)) deallocate(s0)
-        	allocate(s0(len))
-        	s0(1:len) = s1
-		s2 = -999
-
-        	! get expression if it exists
-		s2 = parsee()
-	end do
-
-    	! return the value of sematic actions
-	res => f0(s0)
-end function parses
-
-! rule function e = n:num sep
-function parsee() result(res)
-    	! type defined by user
-	integer :: res
-
-    	! expression value, type infered from rule num
-	integer :: s0, s1
-
-    	! expression value, type string because actions does not exist
-    	character(len=:), allocatable :: s2
-
-    	! value for EOF or error (suggestion: use classes)
-    	s0 = -999
-	s1 = -999
-    
-    	s2 = ""
-
-	s1 = parsenum()
-	if (s1 /= -999) then
-		s2 = parsesep()
-		if (s2 /= "") then
-            		! return the value of sematic actions
-			s0 = f1(s1)
-		end if
-	end if
-	res = s0
-end function parsee
-
-! rule function num = n:[0-9]+
-function parsenum() result(res)
-    	! type defined by user
-	integer :: res
-
-    	! individual lexeme extraction (You can use nextsym())
-	integer :: cursor
-	character(len=:), allocatable :: s0
-	s0 = ""
-	cursor = 1
 	
-	if (cursor > len(input)) then
-        	res = -999
-		return
-    	end if
+
+	contains
 	
-	do while (cursor <= len_trim(input) .and. (((iachar(input(cursor:cursor)) >= iachar("0") .and. &
-        iachar(input(cursor:cursor)) <= iachar("9")))))
-        	cursor = cursor + 1
-    	end do
-	s0 = input(1:cursor-1)
-	input = input(cursor:)
+	subroutine push(value)
+		integer, intent(in) :: value
+			type(node), pointer :: tmp
+				if (associated(head)) then
+				allocate(tmp)
+					tmp%value = value
+					tmp%next => head
+					head => tmp
+				else
+				allocate(head)
+				head%value = value
+				head%next => null()
+			end if	
+		end subroutine push
+	
+	subroutine show()
+			type(node), pointer :: tmp
+			tmp => head
+			do while (associated(tmp))
+				print *, tmp%value
+				tmp => tmp%next
+			end do
+		end subroutine show
 
-    	! return the value of sematic actions
-    	res = f2(s0)
-end function parsenum
 
-! rule function sep = "\n"
-function parsesep() result(res)
-    	! res is lexeme, type string because actions does not exist
-	character(len=:), allocatable :: res
 
-    	! individual lexeme extraction (You can use nextsym())
-	integer :: cursor
+	function parse(str) result(res)
+		character(len=:), allocatable :: str
+		type(node), pointer :: res
 
-	res = ""
-	cursor = 1
+		input = str
+		cursor = 1
 
-	if (cursor > len(input)) return
+		res = peg_s()
+	end function parse
 
-    	if (cursor <= len_trim(input) .and. (char(10) == input(cursor:cursor + 0 ))) then 
-        	cursor = cursor + 1
-    	end if
-	res = input(1:cursor-1)
-	input = input(cursor:)
-end function parsesep
+	
+	function peg_s() result (res)
+		type(node), pointer :: res
+		integer :: expr_0_0
+		integer :: i
 
-! semantic action function from rule s
-function f0(n) result(res)
-    	! type generated from infered type of labels
-	integer, dimension(:), intent(in) :: n
+		savePoint = cursor
+		
+		do i = 0, 1
+			select case(i)
+			
+			case(0)
+				cursor = savePoint
+				
+				expr_0_0 = peg_e()
+				if (.not. acceptEOF()) cycle
+				
+				res = peg_s_f0(expr_0_0)
 
-    	! code from user in semantic actions
-	type(node), pointer :: res	
+
+				exit
+			
+			case default
+				call pegError()
+			end select
+		end do
+
+	end function peg_s
+
+
+	function peg_e() result (res)
+		integer :: res
+		integer :: expr_0_0
+character(len=:), allocatable :: expr_0_1
+		integer :: i
+
+		savePoint = cursor
+		
+		do i = 0, 1
+			select case(i)
+			
+			case(0)
+				cursor = savePoint
+				
+				expr_0_0 = peg_num()
+expr_0_1 = peg_sep()
+				
+				
+				res = peg_e_f0(expr_0_0)
+
+
+				exit
+			
+			case default
+				call pegError()
+			end select
+		end do
+
+	end function peg_e
+
+
+	function peg_num() result (res)
+		integer :: res
+		character(len=:), allocatable :: expr_0_0
+		integer :: i
+
+		savePoint = cursor
+		
+		do i = 0, 1
+			select case(i)
+			
+			case(0)
+				cursor = savePoint
+				
+				
+				lexemeStart = cursor
+				if (.not. (acceptRange('0', '9'))) cycle
+				do while (.not. cursor > len(input))
+					if (.not. (acceptRange('0', '9'))) exit
+				end do 
+				expr_0_0 = consumeInput()
+			
+				 
+				
+				res = peg_num_f0(expr_0_0)
+
+
+				exit
+			
+			case default
+				call pegError()
+			end select
+		end do
+
+	end function peg_num
+
+
+	function peg_sep() result (res)
+		character(len=:), allocatable :: res
+		character(len=:), allocatable :: expr_0_0
+		integer :: i
+
+		savePoint = cursor
+		
+		do i = 0, 1
+			select case(i)
+			
+			case(0)
+				cursor = savePoint
+				
+				
+				lexemeStart = cursor
+				if(.not. acceptString('\n')) cycle
+				expr_0_0 = consumeInput()
+		
+				
+				
+				res = toStr(expr_0_0)
+
+
+				exit
+			
+			case default
+				call pegError()
+			end select
+		end do
+
+	end function peg_sep
+
+
+	
+	function peg_s_f0(n) result(res)
+		integer :: n
+		type(node), pointer :: res
+			
 	integer i
 	do i = 1, size(n)
-        	call push(n(i))
-    	end do
+		call push(n(i))
+	end do
 	res => head
-end function f0
 
-! semantic action function from rule e
-function f1(n) result(res)
-    	! type generated from infered type of labels
-	integer, intent(in) :: n
+	end function peg_s_f0
+	
 
-    	! code from user in semantic actions
-	integer :: res
+	function peg_e_f0(n) result(res)
+		integer :: n
+		integer :: res
+		
 	res = n
-end function f1
 
-! semantic action function from rule num
-function f2(n) result(res)
-    	! type generated from infered type of labels
-    	character(len=:), allocatable :: n
+	end function peg_e_f0
+	
 
-    	! code from user in semantic actions
-    	integer :: res
-    	read(n, *) res
-end function f2
+	function peg_num_f0(n) result(res)
+		character(len=:), allocatable :: n
+		integer :: res
+		
+		read(n, *) res
 
+	end function peg_num_f0
+	
+
+	function acceptString(str) result(accept)
+		character(len=*) :: str
+		logical :: accept
+		integer :: offset
+
+		offset = len(str) - 1
+		if (str /= input(cursor:cursor + offset)) then
+			accept = .false.
+			return
+		end if
+		cursor = cursor + len(str)
+		accept = .true.
+	end function acceptString
+
+	function acceptRange(bottom, top) result(accept)
+		character(len=1) :: bottom, top
+		logical :: accept
+
+		if(.not. (input(cursor:cursor) >= bottom .and. input(cursor:cursor) <= top)) then
+			accept = .false.
+			return
+		end if
+		cursor = cursor + 1
+		accept = .true.
+	end function acceptRange
+
+	function acceptSet(set) result(accept)
+		character(len=1), dimension(:) :: set
+		logical :: accept
+
+		if(.not. (findloc(set, input(cursor:cursor), 1) > 0)) then
+			accept = .false.
+			return
+		end if
+		cursor = cursor + 1
+		accept = .true.
+	end function acceptSet
+
+	function acceptPeriod() result(accept)
+		logical :: accept
+
+		if (cursor > len(input)) then
+			accept = .false.
+			return
+		end if
+		cursor = cursor + 1
+		accept = .true.
+	end function acceptPeriod
+
+	function acceptEOF() result(accept)
+		logical :: accept
+
+		if(.not. cursor > len(input)) then
+			accept = .false.
+			return
+		end if
+		accept = .true.
+	end function acceptEOF
+
+	function consumeInput() result(substr)
+		character(len=:), allocatable :: substr
+
+		substr = input(lexemeStart:cursor - 1)
+	end function consumeInput
+
+	subroutine pegError()
+		print '(A,I1,A)', "Error at ", cursor, ": '"//input(cursor:cursor)//"'"
+
+		call exit(1)
+	end subroutine pegError
+
+	function intToStr(int) result(cast)
+		integer :: int
+		character(len=31) :: tmp
+		character(len=:), allocatable :: cast
+
+		write(tmp, '(I0)') int
+		cast = trim(adjustl(tmp))
+	end function intToStr
+
+	function strToStr(str) result(cast)
+		character(len=:), allocatable :: str
+		character(len=:), allocatable :: cast
+
+		cast = str
+	end function strToStr
 end module parser
