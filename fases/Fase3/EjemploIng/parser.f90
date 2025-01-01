@@ -129,6 +129,7 @@ contains
                 
                 expr_0_0 = parsenum()
                 expr_0_1 = parsesep()
+                ! if (expr_0_1 == "") cycle
                 
                 res = f1(expr_0_0)
                 exit
