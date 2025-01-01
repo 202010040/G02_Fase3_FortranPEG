@@ -1,15 +1,3 @@
-/**
- *
- * @param {{
- *  beforeContains: string
- *  afterContains: string
- *  startingRuleId: string;
- *  startingRuleType: string;
- *  rules: string[];
- *  actions: string[];
- * }} data
- * @returns {string}
- */
 export const main = (data) => `
 !auto-generated
 module parser
@@ -131,16 +119,6 @@ module parser
 end module parser
 `;
 
-/**
- *
- * @param {{
- *  id: string;
- *  returnType: string;
- *  exprDeclarations: string[];
- *  expr: string;
- * }} data
- * @returns
- */
 export const rule = (data) => `
     function peg_${data.id}() result (res)
         ${data.returnType} :: res
@@ -152,13 +130,6 @@ export const rule = (data) => `
     end function peg_${data.id}
 `;
 
-/**
- *
- * @param {{
- *  exprs: string[]
- * }} data
- * @returns
- */
 export const election = (data) => `
         do i = 0, ${data.exprs.length}
             select case(i)
@@ -176,30 +147,12 @@ export const election = (data) => `
         end do
 `;
 
-/**
- *
- * @param {{
- *  exprs: string[]
- *  startingRule: boolean
- *  resultExpr: string
- * }} data
- * @returns
- */
 export const union = (data) => `
                 ${data.exprs.join('\n')}
                 ${data.startingRule ? 'if (.not. acceptEOF()) cycle' : ''}
                 ${data.resultExpr}
 `;
 
-/**
- *
- * @param {{
- *  expr: string;
- *  destination: string
- *  quantifier?: string;
- * }} data
- * @returns
- */
 export const strExpr = (data) => {
     if (!data.quantifier) {
         return `
@@ -213,8 +166,8 @@ export const strExpr = (data) => {
             return `
                 lexemeStart = cursor
                 if (.not. ${data.expr}) cycle
-                do while (.not. cursor > len(input))
-                    if (.not. ${data.expr}) exit
+                do while (cursor <= len(input))
+                    if (.not. (${data.expr} )) exit
                 end do
                 ${data.destination} = consumeInput()
             `;
@@ -225,44 +178,17 @@ export const strExpr = (data) => {
     }
 };
 
-/**
- *
- * @param {{
- *  exprs: string[];
- * }} data
- * @returns
- */
 export const strResultExpr = (data) => `
                 res = ${data.exprs.map((expr) => `toStr(${expr})`).join('//')}
 `;
 
-/**
- *
- * @param {{
- *  fnId: string;
- *  exprs: string[];
- * }} data
- * @returns
- */
 export const fnResultExpr = (data) => `
                 res = ${data.fnId}(${data.exprs.join(', ')})
 `;
 
-/**
- *
- * @param {{
- *  ruleId: string;
- *  choice: number
- *  signature: string[];
- *  returnType: string;
- *  paramDeclarations: string[];
- *  code: string;
- * }} data
- * @returns
- */
 export const action = (data) => {
     const signature = data.signature.join(', ');
-    return `
+    return ` 
     function peg_${data.ruleId}_f${data.choice}(${signature}) result(res)
         ${data.paramDeclarations.join('\n')}
         ${data.returnType} :: res

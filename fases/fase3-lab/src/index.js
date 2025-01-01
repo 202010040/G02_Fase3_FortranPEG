@@ -32,6 +32,7 @@ const analizar = () => {
     errores.length = 0;
     try {
         const cst = parse(entrada);
+        console.log(' Grmatica ', cst)
         if (errores.length > 0) {
             salida.setValue(`Error: ${errores[0].message}`);
             return;

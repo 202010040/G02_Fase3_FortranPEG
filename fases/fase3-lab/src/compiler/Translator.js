@@ -182,7 +182,15 @@ export default class FortranTranslator {
     }
 
     visitString(node) {
-        return `acceptString('${node.val}')`;
+        const literalMap = {
+            "\\t": "char(9)",
+            "\\n": "char(10)",
+            " ": "char(32)",
+            "\\r": "char(13)"
+        };
+        const literalFortran = literalMap[node.val] || `"${node.val}"`;
+        
+        return `acceptString(${literalFortran})`; 
     }
 
     visitClase(node) {
