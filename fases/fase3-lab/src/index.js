@@ -1,9 +1,6 @@
 import * as monaco from 'https://cdn.jsdelivr.net/npm/monaco-editor@0.50.0/+esm';
 import { parse } from './parser/gramatica.js';
-import { generateParser } from './compiler/utils.js';
-
-/** @typedef {import('./visitor/CST.js').Grammar} Grammar*/
-/** @typedef {import('./visitor/Visitor.js').default<string>} Visitor*/
+import generateParser  from './compiler/utils.js';
 
 export let ids = [];
 export let usos = [];
@@ -28,44 +25,37 @@ const salida = monaco.editor.create(document.getElementById('salida'), {
 let decorations = [];
 
 // Analizar contenido del editor
-/** @type {Grammar} */
-let cst;
-const noCatch = false;
 const analizar = () => {
     const entrada = editor.getValue();
     ids.length = 0;
     usos.length = 0;
     errores.length = 0;
-    if (noCatch) {
-        cst = parse(entrada);
-        salida.setValue('Análisis Exitoso');
-        return;
-    }
     try {
-        cst = parse(entrada);
-
+        const cst = parse(entrada);
         if (errores.length > 0) {
             salida.setValue(`Error: ${errores[0].message}`);
-            cst = null;
             return;
         } else {
-            salida.setValue('Análisis Exitoso');
+            const fileContents = generateParser(cst);
+            const blob = new Blob([fileContents], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const button = document.getElementById('BotonDescarga');
+            button.href = url;
+            button.disabled = false;
+            salida.setValue(fileContents);
         }
 
-        // salida.setValue("Análisis Exitoso");
-        // Limpiar decoraciones previas si la validación es exitosa
         decorations = editor.deltaDecorations(decorations, []);
     } catch (e) {
-        cst = null;
+        console.log(e);
+
         if (e.location === undefined) {
             salida.setValue(`Error: ${e.message}`);
         } else {
-            // Mostrar mensaje de error en el editor de salida
             salida.setValue(
                 `Error: ${e.message}\nEn línea ${e.location.start.line} columna ${e.location.start.column}`
             );
 
-            // Resaltar el error en el editor de entrada
             decorations = editor.deltaDecorations(decorations, [
                 {
                     range: new monaco.Range(
@@ -75,7 +65,7 @@ const analizar = () => {
                         e.location.start.column + 1
                     ),
                     options: {
-                        inlineClassName: 'errorHighlight', // Clase CSS personalizada para cambiar color de letra
+                        inlineClassName: 'errorHighlight',
                     },
                 },
                 {
@@ -86,7 +76,7 @@ const analizar = () => {
                         e.location.start.column
                     ),
                     options: {
-                        glyphMarginClassName: 'warningGlyph', // Clase CSS para mostrar un warning en el margen
+                        glyphMarginClassName: 'warningGlyph',
                     },
                 },
             ]);
@@ -97,30 +87,6 @@ const analizar = () => {
 // Escuchar cambios en el contenido del editor
 editor.onDidChangeModelContent(() => {
     analizar();
-});
-
-let downloadHappening = false;
-const button = document.getElementById('BotonDescarga');
-button.addEventListener('click', () => {
-    if (downloadHappening) return;
-    if (!cst) {
-        alert('Escribe una gramatica valida');
-        return;
-    }
-    let url;
-    generateParser(cst)
-        .then((fileContents) => {
-            const blob = new Blob([fileContents], { type: 'text/plain' });
-            url = URL.createObjectURL(blob);
-            button.href = url;
-            downloadHappening = true;
-            button.click();
-        })
-        .finally(() => {
-            URL.revokeObjectURL(url);
-            button.href = '#';
-            downloadHappening = false;
-        });
 });
 
 // CSS personalizado para resaltar el error y agregar un warning
