@@ -396,5 +396,16 @@ function negAssertion(expr) result(res)
     cursor = savedCursor
 end function negAssertion
 
+function negAssertionWithAction(expr, action) result(res)
+    logical :: res
+    integer :: savedCursor
+
+    savedCursor = cursor
+    res = .not. expr
+    if (res) then
+        call action()
+    end if
+    cursor = savedCursor
+end function negAssertionWithAction
 
 end module parser

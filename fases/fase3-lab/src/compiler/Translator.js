@@ -300,6 +300,16 @@ export default class FortranTranslator {
         }
     }
     
+    visitNegAssertion(node) {
+        // Detecta si la aserción negativa tiene una acción semántica
+        const hasAction = !!node.action;
     
+        if (hasAction) {
+            const actionFn = getActionId(this.currentRule, this.currentChoice);
+            return `negAssertionWithAction(${node.expr.accept(this)}, ${actionFn})`;
+        } else {
+            return `negAssertion(${node.expr.accept(this)})`;
+        }
+    }
     
 }
