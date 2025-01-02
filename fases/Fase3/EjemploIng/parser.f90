@@ -364,4 +364,37 @@ expr_0_1 = peg_Rule_sep()
 
         cast = str
     end function strToStr
+
+function posAssertion(expr) result(res)
+    logical :: res
+    integer :: savedCursor
+
+    savedCursor = cursor
+    res = expr
+    cursor = savedCursor
+end function posAssertion
+
+function posAssertionWithAction(expr, action) result(res)
+    logical :: res
+    integer :: savedCursor
+
+    savedCursor = cursor
+    res = expr
+    if (res) then
+        call action()
+    end if
+    cursor = savedCursor
+end function posAssertionWithAction
+
+
+function negAssertion(expr) result(res)
+    logical :: res
+    integer :: savedCursor
+
+    savedCursor = cursor
+    res = .not. expr
+    cursor = savedCursor
+end function negAssertion
+
+
 end module parser

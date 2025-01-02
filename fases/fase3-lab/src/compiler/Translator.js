@@ -286,4 +286,20 @@ export default class FortranTranslator {
     visitFin(node) {
         return 'if (.not. acceptEOF()) cycle';
     }
+
+
+    visitAssertion(node) {
+        // Detecta si la aserción tiene una acción semántica
+        const hasAction = !!node.action;
+    
+        if (hasAction) {
+            const actionFn = getActionId(this.currentRule, this.currentChoice);
+            return `posAssertionWithAction(${node.expr.accept(this)}, ${actionFn})`;
+        } else {
+            return `posAssertion(${node.expr.accept(this)})`;
+        }
+    }
+    
+    
+    
 }
