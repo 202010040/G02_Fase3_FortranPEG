@@ -8,19 +8,19 @@ import { gramatica } from "./utils.js";
 export default class Tokenizer extends Visitor {
 	
     visitProducciones(node) {
-		//console.log(this);
+		////console.log(this);
         return node.expr.accept(this);
     }
 	visitOpciones(node) {
-		console.log('Opciones: ', node)
+		//console.log('Opciones: ', node)
 		return node.exprs.map(node => node.accept(this)).join('\n');
 	}
 	visitUnion(node) {
-		//console.log('Expresion: ', node)
+		////console.log('Expresion: ', node)
 		return node.exprs.map(node => node.accept(this)).join('\n');
 	}
 	visitExpresion(node) {
-		//console.log('Expresion: ', node)
+		////console.log('Expresion: ', node)
 		// Validacion de Str sencillos
 		if (node.expr instanceof String){
 			switch (node.qty) {
@@ -92,7 +92,7 @@ export default class Tokenizer extends Visitor {
 
 	visitReferencia(node) {
 		// Asume que la producción referenciada será visitada y procesada
-		//console.log(gramatica)
+		////console.log(gramatica)
 		const produccionReferenciada = gramatica.find(prod => prod.id === node.id);
 		if (!produccionReferenciada) {
 			console.error(`Referencia no resuelta: ${node.id}`);
@@ -101,7 +101,7 @@ export default class Tokenizer extends Visitor {
 			lexeme = "ERROR"
 			`;
 		}
-		//console.log(produccionReferenciada.expr.exprs[0])
+		////console.log(produccionReferenciada.expr.exprs[0])
 		this.visitOpciones(produccionReferenciada.expr);
 	}
 }

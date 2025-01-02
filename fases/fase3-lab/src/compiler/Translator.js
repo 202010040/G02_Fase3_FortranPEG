@@ -1,8 +1,9 @@
 import * as CST from '../visitor/CST.js';
 import * as Template from '../Templates.js';
-import { getActionId, getReturnType, getExprId, getRuleId, getArrayAsignation } from './utils.js';
+import { getActionId, getReturnType, getExprId, getRuleId, getArrayAsignation, detectFortranType } from './utils.js';
 
 export default class FortranTranslator {
+
     actionReturnTypes;
     actions;
     translatingStart;
@@ -10,6 +11,7 @@ export default class FortranTranslator {
     currentChoice;
     currentExpr;
     hasQuantifiedNonTerminal; 
+    validacionesIFRegla;
 
     constructor(returnTypes) {
         this.actionReturnTypes = returnTypes;
@@ -19,6 +21,7 @@ export default class FortranTranslator {
         this.currentChoice = 0;
         this.currentExpr = 0;
         this.hasQuantifiedNonTerminal = false;
+        this.validacionesIFRegla=[];
     }
 
     visitGrammar(node) {
@@ -38,6 +41,7 @@ export default class FortranTranslator {
     }
 
     visitRegla(node) {
+        
         this.currentRule = node.id;
         this.currentChoice = 0;
         this.hasQuantifiedNonTerminal = false; // Reset en cada regla
@@ -46,10 +50,13 @@ export default class FortranTranslator {
     
         // Función auxiliar para detectar si una expresión tiene cuantificador
         const hasQuantifier = (expr) => {
-            return expr.annotatedExpr?.qty === "+" || expr.annotatedExpr?.qty === "*";
+            //console.log("Tipor de Regla", expr.annotatedExpr?.expr, )
+            return ((expr.annotatedExpr?.qty === "+" || expr.annotatedExpr?.qty === "*") && (expr.annotatedExpr?.expr instanceof CST.Identificador));
         };
     
         const allocateInstructions = [];
+        const deallocateInstructions = [];
+        this.validacionesIFRegla=[]
     
         const ruleTranslation = Template.rule({
             id: node.id,
@@ -70,12 +77,14 @@ export default class FortranTranslator {
                             : 'character(len=:), allocatable';
                         
                         const declarations = [];
-                        
+
                         declarations.push(`${baseType} :: expr_${i}_${j}`);
                         
                         if (hasQuantifier(label.labeledExpr)) {
                             declarations.push(`${baseType}, allocatable :: values_${i}_${j}(:)`);
                             allocateInstructions.push(`allocate(values_${i}_${j}(0))`);
+                            deallocateInstructions.push(`if (allocated(values_${i}_${j})) deallocate(values_${i}_${j}) `);
+                            this.validacionesIFRegla.push([i,j])
                             if (expr instanceof CST.Identificador) {
                                 this.hasQuantifiedNonTerminal = true; // Activar la variable global
                             }
@@ -84,6 +93,7 @@ export default class FortranTranslator {
                         return declarations;
                     })
             ),
+            deallocateStmts: deallocateInstructions,
             allocateStmts: allocateInstructions,
             expr: node.expr.accept(this),
         });
@@ -95,13 +105,15 @@ export default class FortranTranslator {
 
 
     visitOpciones(node) {
-        console.log('Opcion: ', node)
+        console.log('Opcion: ', node);
+                
         return Template.election({
             exprs: node.exprs.map((expr) => {
                 const translation = expr.accept(this);
                 this.currentChoice++;
                 return translation;
             }),
+            sizeValidators: this.validacionesIFRegla
         }, this.hasQuantifiedNonTerminal);
     }
 
@@ -110,7 +122,7 @@ export default class FortranTranslator {
             (expr) => expr instanceof CST.Pluck
         );
         const exprVars = matchExprs.map(
-            (_, i) => `#### expr_${this.currentChoice}_${i}`
+            (_, i) => `${ this.hasQuantifiedNonTerminal ? `values_${this.currentChoice}_${i}` : `expr_${this.currentChoice}_${i}`} `
         );
 
         let neededExprs;
@@ -165,7 +177,8 @@ export default class FortranTranslator {
                     ${getArrayAsignation(
                         this.currentChoice,
                         this.currentExpr
-                    )} `;
+                    )} 
+                    savePoint = cursor`;
                 }
                 return `${getExprId(
                     this.currentChoice,
@@ -189,7 +202,8 @@ export default class FortranTranslator {
                     ${getArrayAsignation(
                         this.currentChoice,
                         this.currentExpr
-                    )} `;
+                    )} 
+                    savePoint = cursor`;
                 }
                 return `${getExprId(
                     this.currentChoice,
@@ -202,7 +216,7 @@ export default class FortranTranslator {
             });
         }
     }
-
+ 
     visitAssertion(node) {
         throw new Error('Method not implemented.');
     }
@@ -222,7 +236,7 @@ export default class FortranTranslator {
                     `${getReturnType(
                         getActionId(ruleId, this.currentChoice),
                         this.actionReturnTypes
-                    )} :: ${label}`
+                    )} ${ this.hasQuantifiedNonTerminal ? ', dimension(:), intent(in)' : '' } :: ${label}`
             ),
             code: node.code,
         });

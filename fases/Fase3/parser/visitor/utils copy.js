@@ -4,7 +4,7 @@ export let gramatica;
 
 export const generarParser = (grammar) => {
     gramatica = grammar;
-    console.log(gramatica);
+    //console.log(gramatica);
     const tokenizer = new Tokenizer()
 
     return `

@@ -32,7 +32,7 @@ const analizar = () => {
     errores.length = 0;
     try {
         const cst = parse(entrada);
-        console.log(' Grmatica ', cst)
+        //console.log(' Grmatica ', cst)
         if (errores.length > 0) {
             salida.setValue(`Error: ${errores[0].message}`);
             return;
@@ -48,7 +48,7 @@ const analizar = () => {
 
         decorations = editor.deltaDecorations(decorations, []);
     } catch (e) {
-        console.log(e);
+        //console.log(e);
 
         if (e.location === undefined) {
             salida.setValue(`Error: ${e.message}`);

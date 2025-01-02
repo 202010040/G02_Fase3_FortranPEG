@@ -40,7 +40,8 @@ module parser
         integer :: offset
 
         offset = len(str) - 1
-        if (str /= input(cursor:cursor + offset)) then
+        if (cursor > len(input) .or. cursor + offset > len(input) .or. &
+            str /= input(cursor:cursor + offset)) then
             accept = .false.
             return
         end if
@@ -135,12 +136,25 @@ export const rule = (data) => `
         savePoint = cursor
         
         ${data.expr}
+        ${data.deallocateStmts.join('\n')}
     end function peg_Rule_${data.id}
 `;
 
+function extractReturn(input) {
+    const regex = /continue_parsing\s*=\s*\.false\.\s*(.*?)\s*exit/gs;
+    const matches = [];
+    let match;
+
+    while ((match = regex.exec(input)) !== null) {
+        matches.push(match[1].trim());
+    }
+
+    return matches;
+}
+
 export const election = (data, cuantificadores) => {
     console.log('Elecciones: ', data, cuantificadores)
-    return `
+    return ` 
     ${cuantificadores 
         ? `
         peg_continue_parsing = .true.
@@ -158,8 +172,21 @@ export const election = (data, cuantificadores) => {
                 `
                 ).join('')}
                 case default
-                    peg_continue_parsing = .false.
-                    call pegError()
+                peg_continue_parsing = .false.
+
+                ${cuantificadores 
+                    ? 
+                    `${data.sizeValidators.map(x => (
+                        `if (size(values_${x[0]}_${x[1]}) > 0 ) then 
+                        ${extractReturn(data.exprs[0])[0]}
+                    `
+                    )).join('else\n')}
+                    else
+                        call pegError()
+                    end if`
+                    : `call pegError()`}
+                    
+                         
                 end select
             end do
         ${cuantificadores 
@@ -171,11 +198,20 @@ export const election = (data, cuantificadores) => {
 };
 
 
-export const union = (data) => `
-                ${data.exprs.join('\n')}
-                ${data.startingRule ? 'if (.not. acceptEOF()) cycle' : ''} 
-                ${data.resultExpr}
-`;
+export const union = (data) => { 
+    //console.log('Data Union', data, data.resultExpr )
+    return (
+`
+        ${data.exprs.join('\n')}
+        ${data.startingRule 
+            ? `if (acceptEOF()) then
+                        peg_continue_parsing = .false.
+                        ${data.resultExpr}
+                        exit
+                    end if` 
+            : `${data.resultExpr}`} 
+`
+) };
 
 export const strExpr = (data) => {
     if (!data.quantifier) {
@@ -225,7 +261,7 @@ export const action = (data) => {
     const signature = data.signature.join(', ');
     return ` 
     function peg_SemanticAction_${data.ruleId}_f${data.choice}(${signature}) result(res)
-        ${data.paramDeclarations.join('\n')}
+        ${data.paramDeclarations.join('\n')} 
         ${data.returnType} :: res
         ${data.code}
     end function peg_SemanticAction_${data.ruleId}_f${data.choice}

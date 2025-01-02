@@ -40,7 +40,7 @@ export default class Tokenizer extends Visitor {
 		return node.exprs.map(node => node.accept(this)).join('\n');
 	}
 	visitExpresion(node) {
-		console.log('Expresion: ', node)
+		//console.log('Expresion: ', node)
 		return node.expr.accept(this);
 	}
 	visitString(node) {
@@ -70,7 +70,7 @@ export default class Tokenizer extends Visitor {
 	}
 
 	visitClase(node){
-		console.log('Clase', node)
+		//console.log('Clase', node)
 		return `
 		i = cursor
 		${this.generateCaracteres(

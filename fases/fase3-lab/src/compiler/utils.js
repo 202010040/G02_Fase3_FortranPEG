@@ -45,7 +45,7 @@ export function getExprId(choice, index) {
 }
 
 export function getArrayAsignation(choice, index) {
-    return `values_${choice}_${index} = [values_${choice}_${index}], expr_${choice}_${index}`; 
+    return `values_${choice}_${index} = [values_${choice}_${index}, expr_${choice}_${index}]`; 
 }
 
 export function getRuleId(rule) {

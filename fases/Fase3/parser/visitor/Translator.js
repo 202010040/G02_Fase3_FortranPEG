@@ -59,7 +59,7 @@ export default class FortranTranslator {
     visitExpresion(node) {
         const condition = node.expr.accept(this);
         let a = node.bloque !== null ? node.bloque.accept(this) : ''
-        console.log('Bloque, ' , a)
+        //console.log('Bloque, ' , a)
         switch (node.qty) {
             case '+':
                 return `
@@ -99,7 +99,7 @@ export default class FortranTranslator {
     
 
     visitCorchetes(node) {
-        //console.log('Clases ', node)
+        ////console.log('Clases ', node)
         let characterClass = [];
         const set = node.exprs
             .filter((char) => char instanceof CST.literalRango)

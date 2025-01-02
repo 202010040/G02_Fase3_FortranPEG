@@ -81,7 +81,7 @@ const analizar = () => {
     
 
     } catch (e) {
-        console.log(e)
+        //console.log(e)
         contenidoArchivo = ""
         if(e.location === undefined){
             

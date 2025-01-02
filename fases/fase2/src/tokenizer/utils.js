@@ -3,7 +3,7 @@ import Tokenizer from "./Tokenizer.js"
 export let gramatica;
 
 export function generateTokenizer(grammar){
-    //console.log(grammar);
+    ////console.log(grammar);
     gramatica = grammar;
     const tokenizer = new Tokenizer()
     return `

@@ -22,7 +22,7 @@ function splitFortranCode(code) {
 export const generateParser = (cst) => {
     /** @type(Visitor) */
     const translator = new FortranTranslator();
-    console.log(cst)
+    //console.log(cst)
     return `
 module parser
     implicit none
