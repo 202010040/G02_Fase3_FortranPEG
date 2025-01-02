@@ -1,6 +1,6 @@
 import * as CST from '../visitor/CST.js';
 import * as Template from '../Templates.js';
-import { getActionId, getReturnType, getExprId, getRuleId } from './utils.js';
+import { getActionId, getReturnType, getExprId, getRuleId, getArrayAsignation } from './utils.js';
 
 export default class FortranTranslator {
     actionReturnTypes;
@@ -9,6 +9,7 @@ export default class FortranTranslator {
     currentRule;
     currentChoice;
     currentExpr;
+    hasQuantifiedNonTerminal; 
 
     constructor(returnTypes) {
         this.actionReturnTypes = returnTypes;
@@ -17,6 +18,7 @@ export default class FortranTranslator {
         this.currentRule = '';
         this.currentChoice = 0;
         this.currentExpr = 0;
+        this.hasQuantifiedNonTerminal = false;
     }
 
     visitGrammar(node) {
@@ -38,9 +40,17 @@ export default class FortranTranslator {
     visitRegla(node) {
         this.currentRule = node.id;
         this.currentChoice = 0;
-
+        this.hasQuantifiedNonTerminal = false; // Reset en cada regla
+    
         if (node.start) this.translatingStart = true;
-
+    
+        // Función auxiliar para detectar si una expresión tiene cuantificador
+        const hasQuantifier = (expr) => {
+            return expr.annotatedExpr?.qty === "+" || expr.annotatedExpr?.qty === "*";
+        };
+    
+        const allocateInstructions = [];
+    
         const ruleTranslation = Template.rule({
             id: node.id,
             returnType: getReturnType(
@@ -50,34 +60,49 @@ export default class FortranTranslator {
             exprDeclarations: node.expr.exprs.flatMap((election, i) =>
                 election.exprs
                     .filter((expr) => expr instanceof CST.Pluck)
-                    .map((label, j) => {
+                    .flatMap((label, j) => {
                         const expr = label.labeledExpr.annotatedExpr.expr;
-                        return `${
-                            expr instanceof CST.Identificador
-                                ? getReturnType(
-                                      getActionId(expr.id, i),
-                                      this.actionReturnTypes
-                                  )
-                                : 'character(len=:), allocatable'
-                        } :: expr_${i}_${j}`;
+                        const baseType = expr instanceof CST.Identificador
+                            ? getReturnType(
+                                  getActionId(expr.id, i),
+                                  this.actionReturnTypes
+                              )
+                            : 'character(len=:), allocatable';
+                        
+                        const declarations = [];
+                        
+                        declarations.push(`${baseType} :: expr_${i}_${j}`);
+                        
+                        if (hasQuantifier(label.labeledExpr)) {
+                            declarations.push(`${baseType}, allocatable :: values_${i}_${j}(:)`);
+                            allocateInstructions.push(`allocate(values_${i}_${j}(0))`);
+                            if (expr instanceof CST.Identificador) {
+                                this.hasQuantifiedNonTerminal = true; // Activar la variable global
+                            }
+                        }
+                        
+                        return declarations;
                     })
             ),
+            allocateStmts: allocateInstructions,
             expr: node.expr.accept(this),
         });
-
+    
         this.translatingStart = false;
-
+    
         return ruleTranslation;
     }
 
+
     visitOpciones(node) {
+        console.log('Opcion: ', node)
         return Template.election({
             exprs: node.exprs.map((expr) => {
                 const translation = expr.accept(this);
                 this.currentChoice++;
                 return translation;
             }),
-        });
+        }, this.hasQuantifiedNonTerminal);
     }
 
     visitUnion(node) {
@@ -85,11 +110,12 @@ export default class FortranTranslator {
             (expr) => expr instanceof CST.Pluck
         );
         const exprVars = matchExprs.map(
-            (_, i) => `expr_${this.currentChoice}_${i}`
+            (_, i) => `#### expr_${this.currentChoice}_${i}`
         );
 
         let neededExprs;
         let resultExpr;
+        let tipoRetorno = node.action?.returnType ?? '' ;
         const currFnId = getActionId(this.currentRule, this.currentChoice);
         if (currFnId in this.actionReturnTypes) {
             neededExprs = exprVars.filter(
@@ -98,6 +124,7 @@ export default class FortranTranslator {
             resultExpr = Template.fnResultExpr({
                 fnId: getActionId(this.currentRule, this.currentChoice),
                 exprs: neededExprs.length > 0 ? neededExprs : [],
+                tipo: tipoRetorno
             });
         } else {
             neededExprs = exprVars.filter((_, i) => matchExprs[i].pluck);
@@ -130,6 +157,16 @@ export default class FortranTranslator {
     visitAnnotated(node) {
         if (node.qty && typeof node.qty === 'string') {
             if (node.expr instanceof CST.Identificador) {
+                if (this.hasQuantifiedNonTerminal) {
+                    return `${getExprId(
+                        this.currentChoice,
+                        this.currentExpr
+                    )} = ${node.expr.accept(this)} 
+                    ${getArrayAsignation(
+                        this.currentChoice,
+                        this.currentExpr
+                    )} `;
+                }
                 return `${getExprId(
                     this.currentChoice,
                     this.currentExpr
@@ -144,6 +181,16 @@ export default class FortranTranslator {
             throw new Error('Repetitions not implemented.');
         } else {
             if (node.expr instanceof CST.Identificador) {
+                if (this.hasQuantifiedNonTerminal) {
+                    return `${getExprId(
+                        this.currentChoice,
+                        this.currentExpr
+                    )} = ${node.expr.accept(this)} 
+                    ${getArrayAsignation(
+                        this.currentChoice,
+                        this.currentExpr
+                    )} `;
+                }
                 return `${getExprId(
                     this.currentChoice,
                     this.currentExpr

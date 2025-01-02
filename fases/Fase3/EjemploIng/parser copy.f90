@@ -6,7 +6,7 @@ module parser
 	interface toStr
 		module procedure intToStr
 		module procedure strToStr
-	end interface
+	end interface 
 	
 	
 	type :: node	

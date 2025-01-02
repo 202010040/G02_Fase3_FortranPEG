@@ -47,12 +47,7 @@ contains
     ! Nueva función parse que retorna la pila
     function parse(str) result(res)
         character(len=:), allocatable :: str
-        type(node), pointer :: res
-        
-        ! Aseguramos que head empiece nulo
-        if (associated(head)) then
-            nullify(head)
-        end if
+        type(node), pointer :: res 
         
         ! Asignamos la entrada y inicializamos el cursor
         input = str
@@ -64,7 +59,7 @@ contains
         
 
     ! Función parses modificada
-    function parses() result(res)
+    function parses() result(res) 
         type(node), pointer :: res
         integer :: expr_0_0
         integer :: i
@@ -263,11 +258,6 @@ contains
         integer, dimension(:), intent(in) :: n
         type(node), pointer :: res    
         integer :: i
-        
-        ! Aseguramos que head empiece nulo
-        if (associated(head)) then
-            nullify(head)
-        end if
         
         ! Construimos la pila en el orden correcto
         do i = 1, size(n)

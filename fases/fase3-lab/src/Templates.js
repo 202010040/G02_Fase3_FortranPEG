@@ -1,4 +1,8 @@
-export const main = (data) => `
+import {detectFortranType} from './compiler/utils.js';
+
+export const main = (data) => {
+return ( 
+`
 !auto-generated
 module parser
     implicit none
@@ -19,11 +23,11 @@ module parser
     function parse(str) result(res)
         character(len=:), allocatable :: str
         ${data.startingRuleType} :: res
-
+        
         input = str
         cursor = 1
 
-        res = ${data.startingRuleId}()
+        res ${detectFortranType(data.startingRuleType) == 'pointer' ? '=>' : '=' } ${data.startingRuleId}()
     end function parse
 
     ${data.rules.join('\n')}
@@ -117,39 +121,59 @@ module parser
         cast = str
     end function strToStr
 end module parser
-`;
+`)};
 
 export const rule = (data) => `
-    function peg_${data.id}() result (res)
+    function peg_Rule_${data.id}() result (res)
         ${data.returnType} :: res
         ${data.exprDeclarations.join('\n')}
+
         integer :: i
+        logical :: peg_continue_parsing 
 
+        ${data.allocateStmts.join('\n')} 
         savePoint = cursor
+        
         ${data.expr}
-    end function peg_${data.id}
+    end function peg_Rule_${data.id}
 `;
 
-export const election = (data) => `
-        do i = 0, ${data.exprs.length}
-            select case(i)
-            ${data.exprs.map(
-                (expr, i) => `
-            case(${i})
-                cursor = savePoint
-                ${expr}
-                exit
-            `
-            )}
-            case default
-                call pegError()
-            end select
+export const election = (data, cuantificadores) => {
+    console.log('Elecciones: ', data, cuantificadores)
+    return `
+    ${cuantificadores 
+        ? `
+        peg_continue_parsing = .true.
+        do while (peg_continue_parsing)
+        ` 
+        :''}
+            do i = 0, ${data.exprs.length}
+                select case(i)
+                ${data.exprs.map(
+                    (expr, i) => `
+                case(${i})
+                    cursor = savePoint
+                    ${expr}
+                    exit
+                `
+                ).join('')}
+                case default
+                    peg_continue_parsing = .false.
+                    call pegError()
+                end select
+            end do
+        ${cuantificadores 
+        ? `
         end do
-`;
+        ` 
+        :''}
+    `;
+};
+
 
 export const union = (data) => `
                 ${data.exprs.join('\n')}
-                ${data.startingRule ? 'if (.not. acceptEOF()) cycle' : ''}
+                ${data.startingRule ? 'if (.not. acceptEOF()) cycle' : ''} 
                 ${data.resultExpr}
 `;
 
@@ -162,12 +186,20 @@ export const strExpr = (data) => {
         `;
     }
     switch (data.quantifier) {
-        case '+':
+        case '+': // Cerradura positiva
             return `
                 lexemeStart = cursor
                 if (.not. ${data.expr}) cycle
                 do while (cursor <= len(input))
-                    if (.not. (${data.expr} )) exit
+                    if (.not. ( ${data.expr} )) exit
+                end do
+                ${data.destination} = consumeInput()
+            `;
+        case '*': // Cerradura de Kleene
+            return `
+                lexemeStart = cursor
+                do while (cursor <= len(input))
+                    if (.not. ( ${data.expr} )) exit
                 end do
                 ${data.destination} = consumeInput()
             `;
@@ -178,21 +210,26 @@ export const strExpr = (data) => {
     }
 };
 
+
 export const strResultExpr = (data) => `
                 res = ${data.exprs.map((expr) => `toStr(${expr})`).join('//')}
 `;
 
-export const fnResultExpr = (data) => `
-                res = ${data.fnId}(${data.exprs.join(', ')})
-`;
+export const fnResultExpr = (data) => {
+return (
+`
+                res ${detectFortranType(data.tipo) == 'pointer' ? '=>' : '=' } ${data.fnId}(${data.exprs.join(', ')})
+`)};
 
 export const action = (data) => {
     const signature = data.signature.join(', ');
     return ` 
-    function peg_${data.ruleId}_f${data.choice}(${signature}) result(res)
+    function peg_SemanticAction_${data.ruleId}_f${data.choice}(${signature}) result(res)
         ${data.paramDeclarations.join('\n')}
         ${data.returnType} :: res
         ${data.code}
-    end function peg_${data.ruleId}_f${data.choice}
+    end function peg_SemanticAction_${data.ruleId}_f${data.choice}
     `;
 };
+
+
