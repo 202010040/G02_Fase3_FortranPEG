@@ -48,7 +48,7 @@ const analizar = () => {
 
         decorations = editor.deltaDecorations(decorations, []);
     } catch (e) {
-        //console.log(e);
+        console.log(e);
 
         if (e.location === undefined) {
             salida.setValue(`Error: ${e.message}`);
