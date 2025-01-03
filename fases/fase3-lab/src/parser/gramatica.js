@@ -312,7 +312,7 @@ function peg$parse(input, options) {
     const labeledExprs = exprs
         .filter((expr) => expr instanceof n.Pluck)
         .filter((expr) => expr.labeledExpr.label);
-    if (labeledExprs.length > 0 && action) {  // Verificamos que action existe
+    if (labeledExprs.length > 0 && action) {
         action.params = labeledExprs.reduce((args, labeled) => {
             const expr = labeled.labeledExpr.annotatedExpr.expr;
             args[labeled.labeledExpr.label] = {

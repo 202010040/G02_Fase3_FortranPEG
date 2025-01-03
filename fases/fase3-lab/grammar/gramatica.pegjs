@@ -54,7 +54,7 @@ union
     const labeledExprs = exprs
         .filter((expr) => expr instanceof n.Pluck)
         .filter((expr) => expr.labeledExpr.label);
-    if (labeledExprs.length > 0 && action) {  // Verificamos que action existe
+    if (labeledExprs.length > 0 && action) {
         action.params = labeledExprs.reduce((args, labeled) => {
             const expr = labeled.labeledExpr.annotatedExpr.expr;
             args[labeled.labeledExpr.label] = {
@@ -138,6 +138,7 @@ predicateReturnType
         isArray: false // Este valor será actualizado en Union basado en el tipo de match
     };
   }
+
   
 clase
   = "[" @contenidoClase+ "]"

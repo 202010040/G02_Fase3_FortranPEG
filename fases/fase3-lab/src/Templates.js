@@ -1,3 +1,4 @@
+// Templates 2
 import {detectFortranType} from './compiler/utils.js';
 
 export const main = (data) => {
@@ -12,6 +13,7 @@ module parser
     interface toStr
         module procedure intToStr
         module procedure strToStr
+        module procedure strArrayToStr
     end interface
     
     ${data.beforeContains}
@@ -74,6 +76,17 @@ module parser
         if (accept) cursor = cursor + 1
     end function acceptSet
 
+    function acceptPeriod() result(accept)
+        logical :: accept
+
+        if (cursor > len(input)) then
+            accept = .false.
+            return
+        end if
+        cursor = cursor + 1
+        accept = .true.
+    end function acceptPeriod
+
     function acceptEOF() result(accept)
         logical :: accept
 
@@ -83,6 +96,26 @@ module parser
         end if
         accept = .true.
     end function acceptEOF
+
+    function negAssertion(expected) result(res)
+        character(len=*), intent(in) :: expected
+        logical :: res
+        integer :: temp_cursor
+        
+        temp_cursor = cursor
+        res = .not. acceptString(expected)
+        cursor = temp_cursor
+    end function negAssertion
+
+    function assertion(expected) result(res)
+        character(len=*), intent(in) :: expected
+        logical :: res
+        integer :: temp_cursor
+        
+        temp_cursor = cursor
+        res = acceptString(expected)
+        cursor = temp_cursor
+    end function assertion
 
     function consumeInput() result(substr)
         character(len=:), allocatable :: substr
@@ -111,6 +144,18 @@ module parser
 
         cast = str
     end function strToStr
+
+    function strArrayToStr(arr) result(str)
+        character(len=:), allocatable :: arr(:)
+        character(len=:), allocatable :: str
+        integer :: i
+        
+        str = ""
+        do i = 1, size(arr)
+            if (i > 1) str = str // ","
+            str = str // arr(i)
+        end do
+    end function strArrayToStr
 end module parser
 `)};
 
@@ -119,7 +164,7 @@ export const rule = (data) => `
         ${data.returnType} :: res
         ${data.exprDeclarations.join('\n')}
 
-        integer :: i
+        integer :: i, count
         logical :: peg_continue_parsing 
 
         ${data.allocateStmts.join('\n')} 
@@ -210,28 +255,60 @@ export const strExpr = (data) => {
                 ${data.destination} = consumeInput()
         `;
     }
+
+    // Manejo de repeticiones específicas
+    if (typeof data.quantifier === 'object') {
+        const count = data.quantifier.count;
+        const separator = data.quantifier.separator;
+        
+        return `
+                lexemeStart = cursor
+                count = 0
+                if (.not. ${data.expr}) cycle
+                do while (count < ${count})
+                    count = count + 1
+                    ${separator ? `
+                    if (count < ${count}) then
+                        if (.not. ${separator}) exit
+                        if (.not. ${data.expr}) exit
+                    end if
+                    ` : ''}
+                end do
+                ${data.destination} = consumeInput()
+        `;
+    }
+
+    // Manejo de cuantificadores normales
     switch (data.quantifier) {
-        case '+': // Cerradura positiva
+        case '+':
             return `
                 lexemeStart = cursor
                 if (.not. ${data.expr}) cycle
                 do while (cursor <= len(input))
-                    if (.not. ( ${data.expr} )) exit
+                    if (.not. ${data.expr}) exit
                 end do
                 ${data.destination} = consumeInput()
             `;
-        case '*': // Cerradura de Kleene
+        case '*':
             return `
                 lexemeStart = cursor
                 do while (cursor <= len(input))
-                    if (.not. ( ${data.expr} )) exit
+                    if (.not. ${data.expr}) exit
                 end do
                 ${data.destination} = consumeInput()
             `;
+        case '?':
+            return `
+                lexemeStart = cursor
+                if (${data.expr}) then
+                    ${data.destination} = consumeInput()
+                else
+                    cursor = lexemeStart
+                    ${data.destination} = ""
+                end if
+            `;
         default:
-            throw new Error(
-                `'${data.quantifier}' quantifier needs implementation`
-            );
+            throw new Error(`Quantifier '${data.quantifier}' not implemented`);
     }
 };
 
@@ -258,4 +335,8 @@ export const action = (data) => {
     `;
 };
 
-
+export const assertion = (data) => {
+    return `
+        {data.assertionCode}
+    `
+}

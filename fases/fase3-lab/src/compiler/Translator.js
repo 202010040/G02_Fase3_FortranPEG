@@ -1,3 +1,5 @@
+// Translator 2
+
 import * as CST from '../visitor/CST.js';
 import * as Template from '../Templates.js';
 import { getActionId, getReturnType, getExprId, getRuleId, getArrayAsignation, detectFortranType } from './utils.js';
@@ -13,6 +15,7 @@ export default class FortranTranslator {
     hasQuantifiedNonTerminal; 
     validacionesIFRegla;
     currentRes;
+    validacionesValues;
 
     constructor(returnTypes) {
         this.actionReturnTypes = returnTypes;
@@ -24,6 +27,7 @@ export default class FortranTranslator {
         this.hasQuantifiedNonTerminal = false;
         this.validacionesIFRegla=[];
         this.currentRes = '';
+        this.validacionesValues = []
     }
 
     visitGrammar(node) {
@@ -89,8 +93,9 @@ export default class FortranTranslator {
                         const declarations = [];
 
                         declarations.push(`${baseType} :: expr_${i}_${j}`);
-                        
-                        if (hasQuantifier(label.labeledExpr)) {
+                        //console.log(`----------- ${i}_${j}-----------------`)
+                        //console.log('Label', label, hasQuantifier(label.labeledExpr))
+                        if (hasQuantifier(label.labeledExpr)) { 
                             declarations.push(`${baseType} ${ this.contienePalabra(baseType, 'allocatable') ? '' : `, allocatable`} :: values_${i}_${j}(:)`); // Valida si ya es una cadena
                             allocateInstructions.push(` ${ this.contienePalabra(baseType, 'allocatable') ? `allocate(values_${i}_${j}(0), source="" )` : `allocate(values_${i}_${j}(0))`}   `);
                             deallocateInstructions.push(`if (allocated(values_${i}_${j})) deallocate(values_${i}_${j}) `);
@@ -107,7 +112,8 @@ export default class FortranTranslator {
             allocateStmts: allocateInstructions,
             expr: node.expr.accept(this),
         });
-    
+        
+        console.log(node.expr)
         this.translatingStart = false;
     
         return ruleTranslation;
@@ -153,6 +159,7 @@ export default class FortranTranslator {
 
 
     visitUnion(node) {
+        this.validacionesValues = []
         const matchExprs = node.exprs.filter(
             (expr) => expr instanceof CST.Pluck
         );
@@ -163,7 +170,7 @@ export default class FortranTranslator {
             const isQuantifiedNonTerminal = this.hasQuantifiedNonTerminal;
             const isNotClaseInstance = !(_.labeledExpr.annotatedExpr.expr instanceof CST.Clase);
             const hasValidQuantifier = _.labeledExpr.annotatedExpr?.qty === "+" || _.labeledExpr.annotatedExpr?.qty === "*";
-        
+            this.validacionesValues.push((this.currentChoice, i))
             const expr = `${
                 (isQuantifiedNonTerminal && isNotClaseInstance && hasValidQuantifier) 
                     ? `values_${this.currentChoice}_${i}` 
@@ -219,65 +226,87 @@ export default class FortranTranslator {
     }
 
     visitAnnotated(node) {
-        if (node.qty && typeof node.qty === 'string') {
-            console.log("Entro a if", node)
-            if (node.expr instanceof CST.Identificador) {
-                if (this.hasQuantifiedNonTerminal) {
-                    return `${getExprId(
-                        this.currentChoice,
-                        this.currentExpr
-                    )} = ${node.expr.accept(this)} 
-                    ${getArrayAsignation(
-                        this.currentChoice,
-                        this.currentExpr
-                    )} 
-                    savePoint = cursor`;
-                }
-                return `${getExprId(
-                    this.currentChoice,
-                    this.currentExpr
-                )} = ${node.expr.accept(this)}`;
-            }
-            return Template.strExpr({
-                quantifier: node.qty,
-                expr: node.expr.accept(this),
-                destination: getExprId(this.currentChoice, this.currentExpr),
-            });
-        } else if (node.qty) {
-            throw new Error('Repetitions not implemented.');
-        } else {
-            console.log("Entro a else", node)
-            if (node.expr instanceof CST.Identificador) {
-                if (this.hasQuantifiedNonTerminal  && node.qty != null) {
-                    return `${getExprId(
-                        this.currentChoice,
-                        this.currentExpr
-                    )} = ${node.expr.accept(this)} 
-                    ${getArrayAsignation(
-                        this.currentChoice,
-                        this.currentExpr
-                    )} 
-                    savePoint = cursor`;
-                }
-                return `${getExprId(
-                    this.currentChoice,
-                    this.currentExpr
-                )} = ${node.expr.accept(this)}`;
-            }
-            return Template.strExpr({
-                expr: node.expr.accept(this),
-                destination: getExprId(this.currentChoice, this.currentExpr),
-            });
+        // Verificación de seguridad
+        if (!node || !node.expr) {
+            console.error('Node or node.expr is undefined:', node);
+            return '';
         }
+    
+        // Manejo de repeticiones específicas
+        if (node.qty) {
+            // Para repeticiones como |3| o |3, ', '|
+            if (typeof node.qty === 'object') {
+                // Verificación de seguridad para el separador
+                const count = node.qty.count || 1;
+                let separator = null;
+                
+                // Verificar si hay un separador y si tiene el método accept
+                if (node.qty.separator && typeof node.qty.separator.accept === 'function') {
+                    separator = node.qty.separator.accept(this);
+                }
+    
+                return Template.strExpr({
+                    quantifier: {
+                        count: count,
+                        separator: separator
+                    },
+                    expr: node.expr.accept(this),
+                    destination: getExprId(this.currentChoice, this.currentExpr),
+                });
+            }
+            
+            // Para cuantificadores simples (*, +, ?)
+            if (typeof node.qty === 'string') {
+                if (node.expr instanceof CST.Identificador) {
+                    if (this.hasQuantifiedNonTerminal  && node.qty != null) {
+                        return `${getExprId(
+                            this.currentChoice,
+                            this.currentExpr
+                        )} = ${node.expr.accept(this)} 
+                        ${getArrayAsignation(
+                            this.currentChoice,
+                            this.currentExpr
+                        )} 
+                        savePoint = cursor`;
+                    }
+                    return `${getExprId(
+                        this.currentChoice,
+                        this.currentExpr
+                    )} = ${node.expr.accept(this)}`;
+                }
+                return Template.strExpr({
+                    quantifier: node.qty,
+                    expr: node.expr.accept(this),
+                    destination: getExprId(this.currentChoice, this.currentExpr),
+                });
+            }
+        }
+    
+        // Expresiones sin cuantificador
+        if (node.expr instanceof CST.Identificador) {
+            if (this.hasQuantifiedNonTerminal) {
+                return `${getExprId(
+                    this.currentChoice,
+                    this.currentExpr
+                )} = ${node.expr.accept(this)} 
+                ${getArrayAsignation(
+                    this.currentChoice,
+                    this.currentExpr
+                )} 
+                savePoint = cursor`;
+            }
+            return `${getExprId(
+                this.currentChoice,
+                this.currentExpr
+            )} = ${node.expr.accept(this)}`;
+        }
+    
+        return Template.strExpr({
+            expr: node.expr.accept(this),
+            destination: getExprId(this.currentChoice, this.currentExpr),
+        });
     }
  
-    visitAssertion(node) {
-        throw new Error('Method not implemented.');
-    }
-
-    visitNegAssertion(node) {
-        throw new Error('Method not implemented.');
-    }
 
     visitPredicate(node) {
         return Template.action({
@@ -351,27 +380,91 @@ export default class FortranTranslator {
 
 
     visitAssertion(node) {
-        // Detecta si la aserción tiene una acción semántica
-        const hasAction = !!node.action;
+        console.log('=== visitAssertion inicio ===');
+        console.log('Nodo recibido:', JSON.stringify(node, null, 2));
     
-        if (hasAction) {
-            const actionFn = getActionId(this.currentRule, this.currentChoice);
-            return `posAssertionWithAction(${node.expr.accept(this)}, ${actionFn})`;
-        } else {
-            return `posAssertion(${node.expr.accept(this)})`;
+        try {
+            // Si el nodo es undefined o null
+            if (!node) {
+                return '';
+            }
+    
+            // Caso 1: Nodo simple con val
+            if (typeof node === 'object' && node.val !== undefined) {
+                return ` if (.not. assertion("${node.val}") ) then\n    call pegError()\nend if `;
+            }
+    
+            // Caso 2: Nodo con assertion anidado
+            if (node.assertion) {
+                if (typeof node.assertion === 'object' && node.assertion.val !== undefined) {
+                    return ` if (.not. assertion("${node.assertion.val}") ) then\n    call pegError()\nend if`;
+                }
+                if (typeof node.assertion.accept === 'function') {
+                    return ` if (.not. assertion(${node.assertion.accept(this)}) ) then\n    call pegError()\nend if`;
+                }
+            }
+    
+            // Caso 3: Nodo con expr
+            if (node.expr && typeof node.expr.accept === 'function') {
+                return ` if (.not. assertion(${node.expr.accept(this)}) ) then\n    call pegError()\nend if`;
+            }
+    
+            console.error('Estructura no reconocida en visitAssertion:', node);
+            return ' if (.not. assertion("") ) then\n    call pegError()\nend if';
+    
+        } catch (error) {
+            console.error('Error en visitAssertion:', error);
+            console.error('Nodo problemático:', node);
+            return ' if (.not. assertion("") ) then\n    call pegError()\nend if';
         }
     }
     
+    
+
     visitNegAssertion(node) {
-        // Detecta si la aserción negativa tiene una acción semántica
-        const hasAction = !!node.action;
+        console.log('=== visitNegAssertion inicio ===');
+        console.log('Nodo recibido:', JSON.stringify(node, null, 2));
     
-        if (hasAction) {
-            const actionFn = getActionId(this.currentRule, this.currentChoice);
-            return `negAssertionWithAction(${node.expr.accept(this)}, ${actionFn})`;
-        } else {
-            return `negAssertion(${node.expr.accept(this)})`;
+        try {
+            // Validación básica
+            if (!node) {
+                throw new Error('Nodo indefinido');
+            }
+    
+            // Caso 1: Aserción simple con valor directo
+            if (typeof node === 'string') {
+                return `if (.not. negAssertion("${node}")) then\n    call pegError()\nend if`;
+            }
+    
+            // Caso 2: Aserción con propiedad 'val'
+            if (node.assertion?.val !== undefined) {
+                const assertion = `negAssertion("${node.assertion.val}")`;
+                return `if (.not. ${assertion}) then\n    call pegError()\nend if`;
+            }
+    
+            // Caso 3: Aserción con método accept
+            if (node.assertion && typeof node.assertion.accept === 'function') {
+                const assertion = `negAssertion(${node.assertion.accept(this)})`;
+                return `if (.not. ${assertion}) then\n    call pegError()\nend if`;
+            }
+    
+            // Caso 4: Expresión con método accept
+            if (node.expr && typeof node.expr.accept === 'function') {
+                const assertion = `negAssertion(${node.expr.accept(this)})`;
+                return `if (.not. ${assertion}) then\n    call pegError()\nend if`;
+            }
+    
+            // Si llegamos aquí, la estructura no es válida
+            console.error('Estructura del nodo no reconocida:', node);
+            return 'if (.not. negAssertion("")) then\n    call pegError()\nend if';
+    
+        } catch (error) {
+            console.error('Error en visitNegAssertion:', error);
+            console.error('Nodo problemático:', node);
+            return 'if (.not. negAssertion("")) then\n    call pegError()\nend if';
         }
     }
+    
+    
     
 }
