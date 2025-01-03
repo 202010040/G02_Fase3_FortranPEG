@@ -1,11 +1,10 @@
 {{
     
     let parentesis_id = 0
-    let reglas_ficticias = [] // array para almacenar reglas ficticias
 
     // import { identificadores } from '../index.js'
 
-    import { ids, usos} from '../index.js'
+    import { ids, usos, reglas_ficticias} from '../index.js' 
     import { ErrorReglas } from './error.js';
     import { errores } from '../index.js'
 
@@ -55,7 +54,7 @@ union
     const labeledExprs = exprs
         .filter((expr) => expr instanceof n.Pluck)
         .filter((expr) => expr.labeledExpr.label);
-    if (labeledExprs.length > 0) {
+    if (labeledExprs.length > 0 && action) {  // Verificamos que action existe
         action.params = labeledExprs.reduce((args, labeled) => {
             const expr = labeled.labeledExpr.annotatedExpr.expr;
             args[labeled.labeledExpr.label] = {
@@ -122,11 +121,10 @@ match
   }
 
 conteo
-  = "|" _ (numero / id:identificador) _ "|"
-  / "|" _ (numero / id:identificador)? _ ".." _ (numero / id2:identificador)? _ "|"
-  / "|" _ (numero / id:identificador)? _ "," _ opciones _ "|"
-  / "|" _ (numero / id:identificador)? _ ".." _ (numero / id2:identificador)? _ "," _ opciones _ "|"
-
+  = "|" _ (numero / id:identificador / predicate) _ "|"
+  / "|" _ (numero / id:identificador / predicate)? _ ".." _ (numero / id2:identificador / predicate)? _ "|"
+  / "|" _ (numero / id:identificador / predicate)? _ "," _ opciones _ "|"
+  / "|" _ (numero / id:identificador / predicate)? _ ".." _ (numero / id2:identificador / predicate)? _ "," _ opciones _ "|"
 
 predicate
   = "{" [ \t\n\r]* returnType:predicateReturnType code:$[^}]* "}" {

@@ -156,9 +156,23 @@ export default class FortranTranslator {
         const matchExprs = node.exprs.filter(
             (expr) => expr instanceof CST.Pluck
         );
-        const exprVars = matchExprs.map( 
-            (_, i) => `${ (this.hasQuantifiedNonTerminal && !(_.labeledExpr.annotatedExpr.expr instanceof CST.Clase)) ? `values_${this.currentChoice}_${i}` : `expr_${this.currentChoice}_${i}`} `
-        );
+        const exprVars = [];
+
+        matchExprs.forEach((_, i) => {
+        
+            const isQuantifiedNonTerminal = this.hasQuantifiedNonTerminal;
+            const isNotClaseInstance = !(_.labeledExpr.annotatedExpr.expr instanceof CST.Clase);
+            const hasValidQuantifier = _.labeledExpr.annotatedExpr?.qty === "+" || _.labeledExpr.annotatedExpr?.qty === "*";
+        
+            const expr = `${
+                (isQuantifiedNonTerminal && isNotClaseInstance && hasValidQuantifier) 
+                    ? `values_${this.currentChoice}_${i}` 
+                    : `expr_${this.currentChoice}_${i}`
+            }`;
+        
+            exprVars.push(expr);
+        });
+        
 
         let neededExprs;
         let resultExpr;
@@ -206,6 +220,7 @@ export default class FortranTranslator {
 
     visitAnnotated(node) {
         if (node.qty && typeof node.qty === 'string') {
+            console.log("Entro a if", node)
             if (node.expr instanceof CST.Identificador) {
                 if (this.hasQuantifiedNonTerminal) {
                     return `${getExprId(
@@ -231,8 +246,9 @@ export default class FortranTranslator {
         } else if (node.qty) {
             throw new Error('Repetitions not implemented.');
         } else {
+            console.log("Entro a else", node)
             if (node.expr instanceof CST.Identificador) {
-                if (this.hasQuantifiedNonTerminal) {
+                if (this.hasQuantifiedNonTerminal  && node.qty != null) {
                     return `${getExprId(
                         this.currentChoice,
                         this.currentExpr
@@ -271,7 +287,6 @@ export default class FortranTranslator {
             returnType: node.returnType,
             paramDeclarations: Object.entries(node.params).map(
                 ([label, paramInfo]) => {
-                    console.log(this.hasQuantifiedNonTerminal, paramInfo.isArray)
                     const needsArrayParams = this.hasQuantifiedNonTerminal && paramInfo.isArray;
                     return `${getReturnType(
                         getActionId(paramInfo.name, this.currentChoice),

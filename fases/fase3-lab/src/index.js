@@ -5,6 +5,7 @@ import generateParser from './compiler/utils.js';
 export let ids = [];
 export let usos = [];
 export let errores = [];
+export let reglas_ficticias = [];
 
 // Crear el editor principal
 const editor = monaco.editor.create(document.getElementById('editor'), {
@@ -33,9 +34,10 @@ const analizar = async () => {
     ids.length = 0;
     usos.length = 0;
     errores.length = 0;
+    reglas_ficticias.length = 0;
 
     try {
-        const cst = parse(entrada);
+        let cst = parse(entrada);
 
         if (errores.length > 0) {
             salida.setValue(`Error: ${errores[0].message}`);

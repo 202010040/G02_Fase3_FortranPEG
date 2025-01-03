@@ -2,6 +2,7 @@ import { main } from '../Templates.js';
 import FortranTranslator from './Translator.js';
 
 export default function generateParser(cst) {
+    console.log(cst)
     return new Promise((resolve, reject) => {
         try {
             const ruleReturnTypes = {};

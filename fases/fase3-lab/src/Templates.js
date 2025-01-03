@@ -1,7 +1,6 @@
 import {detectFortranType} from './compiler/utils.js';
 
 export const main = (data) => {
-    console.log(data);
 return ( 
 `
 !auto-generated
@@ -115,7 +114,7 @@ module parser
 end module parser
 `)};
 
-export const rule = (data) => `
+export const rule = (data) => ` 
     function peg_Rule_${data.id}() result (res)
         ${data.returnType} :: res
         ${data.exprDeclarations.join('\n')}

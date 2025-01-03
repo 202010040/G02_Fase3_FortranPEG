@@ -6,11 +6,10 @@
 
     
     let parentesis_id = 0
-    let reglas_ficticias = [] // array para almacenar reglas ficticias
 
     // import { identificadores } from '../index.js'
 
-    import { ids, usos} from '../index.js'
+    import { ids, usos, reglas_ficticias} from '../index.js' 
     import { ErrorReglas } from './error.js';
     import { errores } from '../index.js'
 
@@ -313,7 +312,7 @@ function peg$parse(input, options) {
     const labeledExprs = exprs
         .filter((expr) => expr instanceof n.Pluck)
         .filter((expr) => expr.labeledExpr.label);
-    if (labeledExprs.length > 0) {
+    if (labeledExprs.length > 0 && action) {  // Verificamos que action existe
         action.params = labeledExprs.reduce((args, labeled) => {
             const expr = labeled.labeledExpr.annotatedExpr.expr;
             args[labeled.labeledExpr.label] = {
@@ -1312,6 +1311,9 @@ function peg$parse(input, options) {
       s3 = peg$parsenumero();
       if (s3 === peg$FAILED) {
         s3 = peg$parseidentificador();
+        if (s3 === peg$FAILED) {
+          s3 = peg$parsepredicate();
+        }
       }
       if (s3 !== peg$FAILED) {
         s4 = peg$parse_();
@@ -1351,6 +1353,9 @@ function peg$parse(input, options) {
         s3 = peg$parsenumero();
         if (s3 === peg$FAILED) {
           s3 = peg$parseidentificador();
+          if (s3 === peg$FAILED) {
+            s3 = peg$parsepredicate();
+          }
         }
         if (s3 === peg$FAILED) {
           s3 = null;
@@ -1368,6 +1373,9 @@ function peg$parse(input, options) {
           s7 = peg$parsenumero();
           if (s7 === peg$FAILED) {
             s7 = peg$parseidentificador();
+            if (s7 === peg$FAILED) {
+              s7 = peg$parsepredicate();
+            }
           }
           if (s7 === peg$FAILED) {
             s7 = null;
@@ -1409,6 +1417,9 @@ function peg$parse(input, options) {
           s3 = peg$parsenumero();
           if (s3 === peg$FAILED) {
             s3 = peg$parseidentificador();
+            if (s3 === peg$FAILED) {
+              s3 = peg$parsepredicate();
+            }
           }
           if (s3 === peg$FAILED) {
             s3 = null;
@@ -1466,6 +1477,9 @@ function peg$parse(input, options) {
             s3 = peg$parsenumero();
             if (s3 === peg$FAILED) {
               s3 = peg$parseidentificador();
+              if (s3 === peg$FAILED) {
+                s3 = peg$parsepredicate();
+              }
             }
             if (s3 === peg$FAILED) {
               s3 = null;
@@ -1483,6 +1497,9 @@ function peg$parse(input, options) {
               s7 = peg$parsenumero();
               if (s7 === peg$FAILED) {
                 s7 = peg$parseidentificador();
+                if (s7 === peg$FAILED) {
+                  s7 = peg$parsepredicate();
+                }
               }
               if (s7 === peg$FAILED) {
                 s7 = null;
