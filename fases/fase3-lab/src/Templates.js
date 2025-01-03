@@ -1,6 +1,7 @@
 import {detectFortranType} from './compiler/utils.js';
 
 export const main = (data) => {
+    console.log(data);
 return ( 
 `
 !auto-generated

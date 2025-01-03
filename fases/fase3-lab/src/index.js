@@ -1,6 +1,6 @@
 import * as monaco from 'https://cdn.jsdelivr.net/npm/monaco-editor@0.50.0/+esm';
 import { parse } from './parser/gramatica.js';
-import generateParser  from './compiler/utils.js';
+import generateParser from './compiler/utils.js';
 
 export let ids = [];
 export let usos = [];
@@ -25,19 +25,19 @@ const salida = monaco.editor.create(document.getElementById('salida'), {
 let decorations = [];
 
 // Analizar contenido del editor
-const analizar = () => {
+const analizar = async () => {
     const entrada = editor.getValue();
     ids.length = 0;
     usos.length = 0;
     errores.length = 0;
     try {
         const cst = parse(entrada);
-        //console.log(' Grmatica ', cst)
+
         if (errores.length > 0) {
             salida.setValue(`Error: ${errores[0].message}`);
             return;
         } else {
-            const fileContents = generateParser(cst);
+            const fileContents = await generateParser(cst); // Manejo de la promesa
             const blob = new Blob([fileContents], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const button = document.getElementById('BotonDescarga');
@@ -48,7 +48,7 @@ const analizar = () => {
 
         decorations = editor.deltaDecorations(decorations, []);
     } catch (e) {
-        console.log(e);
+        console.error(e);
 
         if (e.location === undefined) {
             salida.setValue(`Error: ${e.message}`);
@@ -87,7 +87,7 @@ const analizar = () => {
 
 // Escuchar cambios en el contenido del editor
 editor.onDidChangeModelContent(() => {
-    analizar();
+    analizar(); // No olvidar que ahora es una función asincrónica
 });
 
 // CSS personalizado para resaltar el error y agregar un warning

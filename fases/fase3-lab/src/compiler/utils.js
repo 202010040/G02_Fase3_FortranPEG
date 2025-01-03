@@ -2,19 +2,27 @@ import { main } from '../Templates.js';
 import FortranTranslator from './Translator.js';
 
 export default function generateParser(cst) {
-    const ruleReturnTypes = {};
-    for (const rule of cst.rules) {
-        rule.expr.exprs.forEach((concat, i) => {
-            if (concat.action) {
-                const functionId = `peg_SemanticAction_${rule.id}_f${i}`;
-                ruleReturnTypes[functionId] = concat.action.returnType;
+    return new Promise((resolve, reject) => {
+        try {
+            const ruleReturnTypes = {};
+            for (const rule of cst.rules) {
+                rule.expr.exprs.forEach((concat, i) => {
+                    if (concat.action) {
+                        const functionId = `peg_SemanticAction_${rule.id}_f${i}`;
+                        ruleReturnTypes[functionId] = concat.action.returnType;
+                    }
+                });
             }
-        });
-    }
 
-    const translator = new FortranTranslator(ruleReturnTypes);
-    return cst.accept(translator);
+            const translator = new FortranTranslator(ruleReturnTypes);
+            const result = cst.accept(translator);
+            resolve(result);
+        } catch (error) {
+            reject(error);
+        }
+    });
 }
+
 
 export function detectFortranType(line) {
     // Expresión regular para capturar el tipo y los modificadores
