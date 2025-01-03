@@ -316,8 +316,10 @@ function peg$parse(input, options) {
     if (labeledExprs.length > 0) {
         action.params = labeledExprs.reduce((args, labeled) => {
             const expr = labeled.labeledExpr.annotatedExpr.expr;
-            args[labeled.labeledExpr.label] =
-                expr instanceof n.Identificador ? expr.id : '';
+            args[labeled.labeledExpr.label] = {
+                name: expr instanceof n.Identificador ? expr.id : '',
+                isArray: expr instanceof n.Identificador
+            };
             return args;
         }, {});
     }
@@ -366,10 +368,13 @@ function peg$parse(input, options) {
     return new n.Punto();
   };
   var peg$f16 = function(returnType, code) {
-    return new n.Predicate(returnType, code, {})
+    return new n.Predicate(returnType.type, returnType.isArray, code, {})
   };
   var peg$f17 = function(t) {
-    return t.trim();
+    return {
+        type: t.trim(),
+        isArray: false // Este valor será actualizado en Union basado en el tipo de match
+    };
   };
   var peg$f18 = function(bottom, top) {
     return new n.Rango(bottom, top);

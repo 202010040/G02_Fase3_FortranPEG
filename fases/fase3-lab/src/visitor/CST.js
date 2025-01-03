@@ -122,10 +122,11 @@ export class Predicate {
 	 * @param {string} code
 	 * @param {{ [label: string]: string }} params
      */
-    constructor(returnType, code, params) {
+    constructor(returnType, isArray, code, params) {
         this.returnType = returnType;
-		this.code = code;
-		this.params = params;
+        this.isArray = isArray;
+        this.code = code;
+        this.params = params;
     }
 
     /**

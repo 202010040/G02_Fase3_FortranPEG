@@ -42,6 +42,15 @@ export default class FortranTranslator {
         });
     }
 
+    contienePalabra(cadena, palabra) {
+        // Convertir ambas cadenas a minúsculas para una búsqueda insensible a mayúsculas y minúsculas
+        const cadenaMinuscula = cadena.toLowerCase();
+        const palabraMinuscula = palabra.toLowerCase();
+        // Verificar si la palabra está incluida en la cadena
+        return cadenaMinuscula.includes(palabraMinuscula);
+    }
+    
+    
     visitRegla(node) {
         
         this.currentRule = node.id;
@@ -52,7 +61,6 @@ export default class FortranTranslator {
     
         // Función auxiliar para detectar si una expresión tiene cuantificador
         const hasQuantifier = (expr) => {
-            //console.log("Tipor de Regla", expr.annotatedExpr?.expr, )
             return ((expr.annotatedExpr?.qty === "+" || expr.annotatedExpr?.qty === "*") && (expr.annotatedExpr?.expr instanceof CST.Identificador));
         };
     
@@ -83,8 +91,8 @@ export default class FortranTranslator {
                         declarations.push(`${baseType} :: expr_${i}_${j}`);
                         
                         if (hasQuantifier(label.labeledExpr)) {
-                            declarations.push(`${baseType}, allocatable :: values_${i}_${j}(:)`);
-                            allocateInstructions.push(`allocate(values_${i}_${j}(0))`);
+                            declarations.push(`${baseType} ${ this.contienePalabra(baseType, 'allocatable') ? '' : `, allocatable`} :: values_${i}_${j}(:)`); // Valida si ya es una cadena
+                            allocateInstructions.push(` ${ this.contienePalabra(baseType, 'allocatable') ? `allocate(values_${i}_${j}(0), source="" )` : `allocate(values_${i}_${j}(0))`}   `);
                             deallocateInstructions.push(`if (allocated(values_${i}_${j})) deallocate(values_${i}_${j}) `);
                             this.validacionesIFRegla.push([i,j])
                             if (expr instanceof CST.Identificador) {
@@ -105,10 +113,32 @@ export default class FortranTranslator {
         return ruleTranslation;
     }
 
+    getCurrentRuleReturnType() {
+        return getReturnType(
+            getActionId(this.currentRule, this.currentChoice),
+            this.actionReturnTypes
+        );
+    }
+
+        retornoDefault(tipo){
+        switch (tipo) {
+            case 'integer':
+                return 'res = -999'
+            case 'character(len=:), allocatable':
+                return `res = ""`;
+            case 'logical':
+                return 'res = .false.'
+            case 'type(node), pointer':
+                return 'call pegError()'
+            default:
+                return 'res = null';
+        }
+    }
 
     visitOpciones(node) {
-        console.log('Opcion: ', node);
-                
+        let tipoRetorno = this.getCurrentRuleReturnType();
+        let retDefault = this.retornoDefault(tipoRetorno)
+
         return Template.election({
             exprs: node.exprs.map((expr) => {
                 const translation = expr.accept(this);
@@ -116,16 +146,18 @@ export default class FortranTranslator {
                 return translation;
             }),
             sizeValidators: this.validacionesIFRegla,
-            responseDefault: this.currentRes
+            responseDefault: this.currentRes,
+            rDefault: retDefault,
         }, this.hasQuantifiedNonTerminal);
     }
+
 
     visitUnion(node) {
         const matchExprs = node.exprs.filter(
             (expr) => expr instanceof CST.Pluck
         );
-        const exprVars = matchExprs.map(
-            (_, i) => `${ this.hasQuantifiedNonTerminal ? `values_${this.currentChoice}_${i}` : `expr_${this.currentChoice}_${i}`} `
+        const exprVars = matchExprs.map( 
+            (_, i) => `${ (this.hasQuantifiedNonTerminal && !(_.labeledExpr.annotatedExpr.expr instanceof CST.Clase)) ? `values_${this.currentChoice}_${i}` : `expr_${this.currentChoice}_${i}`} `
         );
 
         let neededExprs;
@@ -238,11 +270,14 @@ export default class FortranTranslator {
             signature: Object.keys(node.params),
             returnType: node.returnType,
             paramDeclarations: Object.entries(node.params).map(
-                ([label, ruleId]) =>
-                    `${getReturnType(
-                        getActionId(ruleId, this.currentChoice),
+                ([label, paramInfo]) => {
+                    console.log(this.hasQuantifiedNonTerminal, paramInfo.isArray)
+                    const needsArrayParams = this.hasQuantifiedNonTerminal && paramInfo.isArray;
+                    return `${getReturnType(
+                        getActionId(paramInfo.name, this.currentChoice),
                         this.actionReturnTypes
-                    )} ${ this.hasQuantifiedNonTerminal ? ', dimension(:), intent(in)' : '' } :: ${label}`
+                    )} ${needsArrayParams ? ', dimension(:), intent(in)' : ''} :: ${label}`;
+                }
             ),
             code: node.code,
         });

@@ -62,12 +62,12 @@ module parser
     function peg_Rule_s() result (res)
         type(node), pointer :: res
         integer :: expr_0_0
-integer, allocatable :: values_0_0(:)
+integer , allocatable :: values_0_0(:)
 
         integer :: i
         logical :: peg_continue_parsing 
 
-        allocate(values_0_0(0)) 
+         allocate(values_0_0(0))    
         savePoint = cursor
         
          
@@ -147,7 +147,7 @@ expr_0_1 = peg_Rule_sep()
                 case default
                 peg_continue_parsing = .false.
 
-                call pegError()
+                res = -999
                     
                          
                 end select
@@ -193,7 +193,7 @@ expr_0_1 = peg_Rule_sep()
                 case default
                 peg_continue_parsing = .false.
 
-                call pegError()
+                res = -999
                     
                          
                 end select
@@ -236,7 +236,7 @@ expr_0_1 = peg_Rule_sep()
                 case default
                 peg_continue_parsing = .false.
 
-                call pegError()
+                res = ""
                     
                          
                 end select
@@ -309,25 +309,15 @@ expr_0_1 = peg_Rule_sep()
     function acceptSet(set) result(accept)
         character(len=1), dimension(:) :: set
         logical :: accept
-
-        if(.not. (findloc(set, input(cursor:cursor), 1) > 0)) then
-            accept = .false.
-            return
-        end if
-        cursor = cursor + 1
-        accept = .true.
-    end function acceptSet
-
-    function acceptPeriod() result(accept)
-        logical :: accept
-
+        
         if (cursor > len(input)) then
             accept = .false.
             return
         end if
-        cursor = cursor + 1
-        accept = .true.
-    end function acceptPeriod
+        
+        accept = any(set == input(cursor:cursor))
+        if (accept) cursor = cursor + 1
+    end function acceptSet
 
     function acceptEOF() result(accept)
         logical :: accept

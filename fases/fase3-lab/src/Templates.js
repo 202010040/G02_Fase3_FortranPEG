@@ -74,17 +74,6 @@ module parser
         if (accept) cursor = cursor + 1
     end function acceptSet
 
-    function acceptPeriod() result(accept)
-        logical :: accept
-
-        if (cursor > len(input)) then
-            accept = .false.
-            return
-        end if
-        cursor = cursor + 1
-        accept = .true.
-    end function acceptPeriod
-
     function acceptEOF() result(accept)
         logical :: accept
 
@@ -154,7 +143,6 @@ function extractReturn(input) {
 }
 
 export const election = (data, cuantificadores) => {
-    console.log('Elecciones: ', data, cuantificadores)
     return ` 
     ${cuantificadores 
         ? `
@@ -183,9 +171,9 @@ export const election = (data, cuantificadores) => {
                     `
                     )).join('else\n')}
                     else
-                        call pegError()
+                        ${data.rDefault}
                     end if`
-                    : `call pegError()`}
+                    : `${data.rDefault}`}
                     
                          
                 end select
@@ -253,6 +241,7 @@ export const strResultExpr = (data) => `
 `;
  
 export const fnResultExpr = (data) => {
+    //console.log('Destiny ',data)
 return (
 `
                 res ${detectFortranType(data.tipo) == 'pointer' ? '=>' : '=' } ${data.fnId}(${data.exprs.join(', ')})

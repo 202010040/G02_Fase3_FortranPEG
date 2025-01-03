@@ -58,8 +58,10 @@ union
     if (labeledExprs.length > 0) {
         action.params = labeledExprs.reduce((args, labeled) => {
             const expr = labeled.labeledExpr.annotatedExpr.expr;
-            args[labeled.labeledExpr.label] =
-                expr instanceof n.Identificador ? expr.id : '';
+            args[labeled.labeledExpr.label] = {
+                name: expr instanceof n.Identificador ? expr.id : '',
+                isArray: expr instanceof n.Identificador
+            };
             return args;
         }, {});
     }
@@ -125,16 +127,20 @@ conteo
   / "|" _ (numero / id:identificador)? _ "," _ opciones _ "|"
   / "|" _ (numero / id:identificador)? _ ".." _ (numero / id2:identificador)? _ "," _ opciones _ "|"
 
+
 predicate
   = "{" [ \t\n\r]* returnType:predicateReturnType code:$[^}]* "}" {
-    return new n.Predicate(returnType, code, {})
+    return new n.Predicate(returnType.type, returnType.isArray, code, {})
   }
 
 predicateReturnType
   = t:$(. !"::")+ [ \t\n\r]* "::" [ \t\n\r]* "res" {
-    return t.trim();
+    return {
+        type: t.trim(),
+        isArray: false // Este valor será actualizado en Union basado en el tipo de match
+    };
   }
-
+  
 clase
   = "[" @contenidoClase+ "]"
 
