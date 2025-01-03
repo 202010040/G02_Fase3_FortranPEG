@@ -103,7 +103,7 @@ integer , allocatable :: values_0_0(:)
 
                     
                     else
-                        call pegError()
+                        res => null()
                     end if
                     
                          

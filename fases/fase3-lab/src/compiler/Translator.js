@@ -129,9 +129,9 @@ export default class FortranTranslator {
             case 'logical':
                 return 'res = .false.'
             case 'type(node), pointer':
-                return 'call pegError()'
+                return 'res => null()'
             default:
-                return 'res = null';
+                return 'call pegError()';
         }
     }
 
