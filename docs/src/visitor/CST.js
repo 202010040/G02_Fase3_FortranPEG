@@ -1,202 +1,408 @@
 
 // Auto-generated
-import Node from './Node.js';
 
-export class Producciones extends Node {
-    constructor(id, expr, alias) {
-        super();
-        this.id = id;
-		this.expr = expr;
-		this.alias = alias;
+/**
+ * @template T
+ * @typedef {import('./Visitor.js').default<T>} Visitor
+ */
+/**
+ * @typedef {import('./Node.js').default} Node
+ */
+
+
+/**
+ * @implements {Node}
+ */
+export class Grammar {
+    /**
+     *
+     * @param {Regla[]} rules
+	 * @param {{ before: string; after?: string }=} globalCode
+     */
+    constructor(rules, globalCode) {
+        this.rules = rules;
+		this.globalCode = globalCode;
     }
 
+    /**
+     * @template T
+     * @param {Visitor<T>} visitor
+     * @returns {T}
+     */
     accept(visitor) {
-        return visitor.visitProducciones(this);
+        return visitor.visitGrammar(this);
     }
 }
     
-export class Opciones extends Node {
+
+/**
+ * @implements {Node}
+ */
+export class Regla {
+    /**
+     *
+     * @param {string} id
+	 * @param {Opciones} expr
+	 * @param {string=} alias
+	 * @param {boolean=} start
+     */
+    constructor(id, expr, alias, start) {
+        this.id = id;
+		this.expr = expr;
+		this.alias = alias;
+		this.start = start;
+    }
+
+    /**
+     * @template T
+     * @param {Visitor<T>} visitor
+     * @returns {T}
+     */
+    accept(visitor) {
+        return visitor.visitRegla(this);
+    }
+}
+    
+
+/**
+ * @implements {Node}
+ */
+export class Opciones {
+    /**
+     *
+     * @param {Union[]} exprs
+     */
     constructor(exprs) {
-        super();
         this.exprs = exprs;
     }
 
+    /**
+     * @template T
+     * @param {Visitor<T>} visitor
+     * @returns {T}
+     */
     accept(visitor) {
         return visitor.visitOpciones(this);
     }
 }
     
-export class Union extends Node {
-    constructor(exprs) {
-        super();
+
+/**
+ * @implements {Node}
+ */
+export class Union {
+    /**
+     *
+     * @param {Node[]} exprs
+	 * @param {Predicate=} action
+     */
+    constructor(exprs, action) {
         this.exprs = exprs;
+		this.action = action;
     }
 
+    /**
+     * @template T
+     * @param {Visitor<T>} visitor
+     * @returns {T}
+     */
     accept(visitor) {
         return visitor.visitUnion(this);
     }
 }
     
-export class Expresion extends Node {
-    constructor(expr, label, qty) {
-        super();
-        this.expr = expr;
-		this.label = label;
-		this.qty = qty;
+
+/**
+ * @implements {Node}
+ */
+export class Predicate {
+    /**
+     *
+     * @param {string} returnType
+	 * @param {string} code
+	 * @param {{ [label: string]: string }} params
+     */
+    constructor(returnType, isArray, code, params) {
+        this.returnType = returnType;
+        this.isArray = isArray;
+        this.code = code;
+        this.params = params;
     }
 
+    /**
+     * @template T
+     * @param {Visitor<T>} visitor
+     * @returns {T}
+     */
     accept(visitor) {
-        return visitor.visitExpresion(this);
+        return visitor.visitPredicate(this);
     }
 }
     
-export class String extends Node {
+
+/**
+ * @implements {Node}
+ */
+export class Pluck {
+    /**
+     *
+     * @param {Label} labeledExpr
+	 * @param {boolean=} pluck
+     */
+    constructor(labeledExpr, pluck) {
+        this.labeledExpr = labeledExpr;
+		this.pluck = pluck;
+    }
+
+    /**
+     * @template T
+     * @param {Visitor<T>} visitor
+     * @returns {T}
+     */
+    accept(visitor) {
+        return visitor.visitPluck(this);
+    }
+}
+    
+
+/**
+ * @implements {Node}
+ */
+export class Label {
+    /**
+     *
+     * @param {Annotated} annotatedExpr
+	 * @param {string=} label
+     */
+    constructor(annotatedExpr, label) {
+        this.annotatedExpr = annotatedExpr;
+		this.label = label;
+    }
+
+    /**
+     * @template T
+     * @param {Visitor<T>} visitor
+     * @returns {T}
+     */
+    accept(visitor) {
+        return visitor.visitLabel(this);
+    }
+}
+    
+
+/**
+ * @implements {Node}
+ */
+export class Annotated {
+    /**
+     *
+     * @param {Node} expr
+	 * @param {(string|Node)=} qty
+	 * @param {boolean=} text
+     */
+    constructor(expr, qty, text) {
+        this.expr = expr;
+		this.qty = qty;
+		this.text = text;
+    }
+
+    /**
+     * @template T
+     * @param {Visitor<T>} visitor
+     * @returns {T}
+     */
+    accept(visitor) {
+        return visitor.visitAnnotated(this);
+    }
+}
+    
+
+/**
+ * @implements {Node}
+ */
+export class Assertion {
+    /**
+     *
+     * @param {Node} assertion
+     */
+    constructor(assertion) {
+        this.assertion = assertion;
+    }
+
+    /**
+     * @template T
+     * @param {Visitor<T>} visitor
+     * @returns {T}
+     */
+    accept(visitor) {
+        return visitor.visitAssertion(this);
+    }
+}
+    
+
+/**
+ * @implements {Node}
+ */
+export class NegAssertion {
+    /**
+     *
+     * @param {Node} assertion
+     */
+    constructor(assertion) {
+        this.assertion = assertion;
+    }
+
+    /**
+     * @template T
+     * @param {Visitor<T>} visitor
+     * @returns {T}
+     */
+    accept(visitor) {
+        return visitor.visitNegAssertion(this);
+    }
+}
+    
+
+/**
+ * @implements {Node}
+ */
+export class String {
+    /**
+     *
+     * @param {string} val
+	 * @param {boolean=} isCase
+     */
     constructor(val, isCase) {
-        super();
         this.val = val;
 		this.isCase = isCase;
     }
 
+    /**
+     * @template T
+     * @param {Visitor<T>} visitor
+     * @returns {T}
+     */
     accept(visitor) {
         return visitor.visitString(this);
     }
 }
     
-export class Clase extends Node {
+
+/**
+ * @implements {Node}
+ */
+export class Clase {
+    /**
+     *
+     * @param {(string|Rango)[]} chars
+	 * @param {boolean=} isCase
+     */
     constructor(chars, isCase) {
-        super();
         this.chars = chars;
 		this.isCase = isCase;
     }
 
+    /**
+     * @template T
+     * @param {Visitor<T>} visitor
+     * @returns {T}
+     */
     accept(visitor) {
         return visitor.visitClase(this);
     }
 }
     
-export class Rango extends Node {
-    constructor(rangoInicial, rangoFinal) {
-        super();
-        this.rangoInicial = rangoInicial;
-		this.rangoFinal = rangoFinal;
+
+/**
+ * @implements {Node}
+ */
+export class Rango {
+    /**
+     *
+     * @param {string} bottom
+	 * @param {string} top
+     */
+    constructor(bottom, top) {
+        this.bottom = bottom;
+		this.top = top;
     }
 
+    /**
+     * @template T
+     * @param {Visitor<T>} visitor
+     * @returns {T}
+     */
     accept(visitor) {
         return visitor.visitRango(this);
     }
 }
     
-export class Identificador extends Node {
+
+/**
+ * @implements {Node}
+ */
+export class Identificador {
+    /**
+     *
+     * @param {string} id
+     */
     constructor(id) {
-        super();
         this.id = id;
     }
 
+    /**
+     * @template T
+     * @param {Visitor<T>} visitor
+     * @returns {T}
+     */
     accept(visitor) {
         return visitor.visitIdentificador(this);
     }
 }
     
-export class Punto extends Node {
+
+/**
+ * @implements {Node}
+ */
+export class Punto {
+    /**
+     *
+    
+     */
     constructor() {
-        super();
         
     }
 
+    /**
+     * @template T
+     * @param {Visitor<T>} visitor
+     * @returns {T}
+     */
     accept(visitor) {
         return visitor.visitPunto(this);
     }
 }
     
-export class Fin extends Node {
+
+/**
+ * @implements {Node}
+ */
+export class Fin {
+    /**
+     *
+    
+     */
     constructor() {
-        super();
         
     }
 
+    /**
+     * @template T
+     * @param {Visitor<T>} visitor
+     * @returns {T}
+     */
     accept(visitor) {
         return visitor.visitFin(this);
-    }
-}
-    
-export class Etiqueta extends Node {
-    constructor(id, varios) {
-        super();
-        this.id = id;
-		this.varios = varios;
-    }
-
-    accept(visitor) {
-        return visitor.visitEtiqueta(this);
-    }
-}
-    
-export class Varios extends Node {
-    constructor(symbol) {
-        super();
-        this.symbol = symbol;
-    }
-
-    accept(visitor) {
-        return visitor.visitVarios(this);
-    }
-}
-    
-export class Conteo extends Node {
-    constructor(min, max, opciones) {
-        super();
-        this.min = min;
-		this.max = max;
-		this.opciones = opciones;
-    }
-
-    accept(visitor) {
-        return visitor.visitConteo(this);
-    }
-}
-    
-export class ContenidoClase extends Node {
-    constructor(rangoInicial, rangoFinal) {
-        super();
-        this.rangoInicial = rangoInicial;
-		this.rangoFinal = rangoFinal;
-    }
-
-    accept(visitor) {
-        return visitor.visitContenidoClase(this);
-    }
-}
-    
-export class Literal extends Node {
-    constructor(value) {
-        super();
-        this.value = value;
-    }
-
-    accept(visitor) {
-        return visitor.visitLiteral(this);
-    }
-}
-    
-export class Caracter extends Node {
-    constructor(char) {
-        super();
-        this.char = char;
-    }
-
-    accept(visitor) {
-        return visitor.visitCaracter(this);
-    }
-}
-    
-export class Referencia extends Node {
-    constructor(id) {
-        super();
-        this.id = id;
-    }
-
-    accept(visitor) {
-        return visitor.visitReferencia(this);
     }
 }
     
