@@ -26,10 +26,14 @@ let decorations = [];
 
 // Analizar contenido del editor
 const analizar = async () => {
+    // Limpia el contenido del editor de salida antes de procesar
+    salida.setValue('');
+
     const entrada = editor.getValue();
     ids.length = 0;
     usos.length = 0;
     errores.length = 0;
+
     try {
         const cst = parse(entrada);
 
@@ -84,6 +88,7 @@ const analizar = async () => {
         }
     }
 };
+
 
 // Escuchar cambios en el contenido del editor
 editor.onDidChangeModelContent(() => {
