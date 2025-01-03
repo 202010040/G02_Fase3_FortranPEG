@@ -178,7 +178,7 @@ export const election = (data, cuantificadores) => {
                     ? 
                     `${data.sizeValidators.map(x => (
                         `if (size(values_${x[0]}_${x[1]}) > 0 ) then 
-                        ${extractReturn(data.exprs[0])[0]}
+                        ${data.responseDefault}
                     `
                     )).join('else\n')}
                     else
@@ -250,7 +250,7 @@ export const strExpr = (data) => {
 export const strResultExpr = (data) => `
                 res = ${data.exprs.map((expr) => `toStr(${expr})`).join('//')}
 `;
-
+ 
 export const fnResultExpr = (data) => {
 return (
 `

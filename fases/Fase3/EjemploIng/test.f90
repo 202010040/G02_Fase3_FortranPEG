@@ -1,34 +1,35 @@
 program test
-    use parser
-    implicit none
-    
-    ! Test cases
-    character(len=:), allocatable :: expression
-    integer :: result
-    
-    ! Test 1: Simple addition
-    expression = "2 + 3"
-    result = parse(expression)
-    print *, "Test 1: ", expression, " = ", result
-    
-    ! Test 2: Simple multiplication
-    expression = "4 * 5"
-    result = parse(expression)
-    print *, "Test 2: ", expression, " = ", result
-    
-    ! Test 3: Parentheses
-    expression = "2 * (3 + 4)"
-    result = parse(expression)
-    print *, "Test 3: ", expression, " = ", result
-    
-    ! Test 4: Complex expression
-    expression = "2 * 3 + 4 * 5"
-    result = parse(expression)
-    print *, "Test 4: ", expression, " = ", result
-    
-    ! Test 5: Nested parentheses
-    expression = "(2 + 3) * (4 + 5)"
-    result = parse(expression)
-    print *, "Test 5: ", expression, " = ", result
+	use parser
+	implicit none
+	character(len=100) :: filename
+	character(len=:), allocatable :: inputstr
+	integer :: u, len
+	logical :: exists
+	type(node), pointer :: stack => null() 
+
+	if (command_argument_count() == 0) then
+		print *, "error: no input file"
+		stop
+	end if
+
+	call get_command_argument(1, filename)
+
+	inquire(file=filename, exist=exists, size=len)
+	if (exists) then
+		open (1, file=filename, status='old', action='read', access='stream', form='unformatted')
+		allocate (character(len=len) :: inputstr)
+        read (1) inputstr
+		stack => parse(inputstr)
+		call show()
+	else
+		print *, "error: file is not present"
+		stop
+	end if
+
+	close(u)
 
 end program test
+
+
+
+

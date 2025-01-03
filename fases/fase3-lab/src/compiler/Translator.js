@@ -12,6 +12,7 @@ export default class FortranTranslator {
     currentExpr;
     hasQuantifiedNonTerminal; 
     validacionesIFRegla;
+    currentRes;
 
     constructor(returnTypes) {
         this.actionReturnTypes = returnTypes;
@@ -22,6 +23,7 @@ export default class FortranTranslator {
         this.currentExpr = 0;
         this.hasQuantifiedNonTerminal = false;
         this.validacionesIFRegla=[];
+        this.currentRes = '';
     }
 
     visitGrammar(node) {
@@ -113,7 +115,8 @@ export default class FortranTranslator {
                 this.currentChoice++;
                 return translation;
             }),
-            sizeValidators: this.validacionesIFRegla
+            sizeValidators: this.validacionesIFRegla,
+            responseDefault: this.currentRes
         }, this.hasQuantifiedNonTerminal);
     }
 
@@ -147,6 +150,9 @@ export default class FortranTranslator {
         this.currentExpr = 0;
 
         if (node.action) this.actions.push(node.action.accept(this));
+
+        this.currentRes = resultExpr; 
+
         return Template.union({
             exprs: node.exprs.map((expr) => {
                 const translation = expr.accept(this);
@@ -256,9 +262,15 @@ export default class FortranTranslator {
 
     visitClase(node) {
         let characterClass = [];
+        const literalMap = {
+            "\\t": "char(9)",
+            "\\n": "char(10)",
+            " ": "char(32)",
+            "\\r": "char(13)"
+        };
         const set = node.chars
             .filter((char) => typeof char === 'string')
-            .map((char) => `'${char}'`);
+            .map((char) => literalMap[char] || `'${char}'`);
         const ranges = node.chars
             .filter((char) => char instanceof CST.Rango)
             .map((range) => range.accept(this));

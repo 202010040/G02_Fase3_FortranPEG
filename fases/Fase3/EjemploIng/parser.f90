@@ -11,39 +11,63 @@ module parser
     end interface
     
     
-    type :: operation
-        character(len=:), allocatable :: operator
-        integer :: operand
-    end type
+	type :: node	
+		integer :: value
+		type(node), pointer :: next => null()
+	end type node
 
-   
+	type(node), pointer :: head => null()
+
+  
 
     contains
     
-    
+    subroutine push(value)
+		integer, intent(in) :: value
+	  	type(node), pointer :: tmp
+      		if (associated(head)) then
+        		allocate(tmp)
+	      		tmp%value = value
+	      		tmp%next => head
+	      		head => tmp
+      		else
+        		allocate(head)
+        		head%value = value
+        		head%next => null()
+    		end if	
+  	end subroutine push
+	
+	subroutine show()
+	  	type(node), pointer :: tmp
+	  	tmp => head
+	  	do while (associated(tmp))
+		  	print *, tmp%value
+		  	tmp => tmp%next
+	  	end do
+  	end subroutine show
+
+
 
     function parse(str) result(res)
         character(len=:), allocatable :: str
-        integer :: res
+        type(node), pointer :: res
         
         input = str
         cursor = 1
 
-        res = peg_Rule_Expression()
+        res => peg_Rule_s()
     end function parse
 
     
-    function peg_Rule_Expression() result (res)
-        integer :: res
+    function peg_Rule_s() result (res)
+        type(node), pointer :: res
         integer :: expr_0_0
-        integer, allocatable :: values_0_0(:)
-type(operation) :: expr_0_1
-type(operation), allocatable :: values_0_1(:)
+integer, allocatable :: values_0_0(:)
 
         integer :: i
         logical :: peg_continue_parsing 
 
-        allocate(values_0_1(0)) 
+        allocate(values_0_0(0)) 
         savePoint = cursor
         
          
@@ -57,16 +81,13 @@ type(operation), allocatable :: values_0_1(:)
                 case(0)
                     cursor = savePoint
                     
-        expr_0_0 = peg_Rule_Term() 
+        expr_0_0 = peg_Rule_e() 
                     values_0_0 = [values_0_0, expr_0_0] 
-                    savePoint = cursor
-expr_0_1 = peg_Rule_ExpressionTail() 
-                    values_0_1 = [values_0_1, expr_0_1] 
                     savePoint = cursor
         if (acceptEOF()) then
                         peg_continue_parsing = .false.
                         
-                res = peg_SemanticAction_Expression_f0(values_0_0 , values_0_1 )
+                res => peg_SemanticAction_s_f0(values_0_0 )
 
                         exit
                     end if 
@@ -76,8 +97,10 @@ expr_0_1 = peg_Rule_ExpressionTail()
                 case default
                 peg_continue_parsing = .false.
 
-                if (size(values_0_1) > 0 ) then 
-                        res = peg_SemanticAction_Expression_f0(values_0_0 , values_0_1 )
+                if (size(values_0_0) > 0 ) then 
+                        
+                res => peg_SemanticAction_s_f0(values_0_0 )
+
                     
                     else
                         call pegError()
@@ -90,16 +113,14 @@ expr_0_1 = peg_Rule_ExpressionTail()
         end do
         
     
-        if (allocated(values_0_1)) deallocate(values_0_1) 
-    end function peg_Rule_Expression
+        if (allocated(values_0_0)) deallocate(values_0_0) 
+    end function peg_Rule_s
 
 
-    function peg_Rule_ExpressionTail() result (res)
-        type(operation) :: res
-        character(len=:), allocatable :: expr_0_0
+    function peg_Rule_e() result (res)
+        integer :: res
+        integer :: expr_0_0
 character(len=:), allocatable :: expr_0_1
-character(len=:), allocatable :: expr_0_2
-integer :: expr_0_3
 
         integer :: i
         logical :: peg_continue_parsing 
@@ -115,12 +136,10 @@ integer :: expr_0_3
                 case(0)
                     cursor = savePoint
                     
-        expr_0_0 = peg_Rule__()
-expr_0_1 = peg_Rule_peg_parentesis_1()
-expr_0_2 = peg_Rule__()
-expr_0_3 = peg_Rule_Term()
+        expr_0_0 = peg_Rule_num()
+expr_0_1 = peg_Rule_sep()
         
-                res = peg_SemanticAction_ExpressionTail_f0(expr_0_1 , expr_0_3 )
+                res = peg_SemanticAction_e_f0(expr_0_0 )
  
 
                     exit
@@ -136,135 +155,12 @@ expr_0_3 = peg_Rule_Term()
         
     
         
-    end function peg_Rule_ExpressionTail
+    end function peg_Rule_e
 
 
-    function peg_Rule_Term() result (res)
+    function peg_Rule_num() result (res)
         integer :: res
         character(len=:), allocatable :: expr_0_0
-type(operation) :: expr_0_1
-type(operation), allocatable :: values_0_1(:)
-
-        integer :: i
-        logical :: peg_continue_parsing 
-
-        allocate(values_0_1(0)) 
-        savePoint = cursor
-        
-         
-    
-        peg_continue_parsing = .true.
-        do while (peg_continue_parsing)
-        
-            do i = 0, 1
-                select case(i)
-                
-                case(0)
-                    cursor = savePoint
-                    
-        expr_0_0 = peg_Rule_Factor() 
-                    values_0_0 = [values_0_0, expr_0_0] 
-                    savePoint = cursor
-expr_0_1 = peg_Rule_peg_parentesis_3() 
-                    values_0_1 = [values_0_1, expr_0_1] 
-                    savePoint = cursor
-        
-                res = peg_SemanticAction_Term_f0(values_0_0 , values_0_1 )
- 
-
-                    exit
-                
-                case default
-                peg_continue_parsing = .false.
-
-                if (size(values_0_1) > 0 ) then 
-                        res = peg_SemanticAction_Term_f0(values_0_0, values_0_1)
-                    
-                    else
-                        call pegError()
-                    end if
-                    
-                         
-                end select
-            end do
-        
-        end do
-        
-    
-        if (allocated(values_0_1)) deallocate(values_0_1) 
-    end function peg_Rule_Term
-
-
-    function peg_Rule_Factor() result (res)
-        character(len=:), allocatable :: res
-        character(len=:), allocatable :: expr_0_0
-character(len=:), allocatable :: expr_0_1
-integer :: expr_0_2
-character(len=:), allocatable :: expr_0_3
-character(len=:), allocatable :: expr_0_4
-character(len=:), allocatable :: expr_1_0
-
-        integer :: i
-        logical :: peg_continue_parsing 
-
-         
-        savePoint = cursor
-        
-         
-    
-            do i = 0, 2
-                select case(i)
-                
-                case(0)
-                    cursor = savePoint
-                    
-        
-                lexemeStart = cursor
-                if(.not. acceptString("(")) cycle
-                expr_0_0 = consumeInput()
-        
-expr_0_1 = peg_Rule__()
-expr_0_2 = peg_Rule_Expression()
-expr_0_3 = peg_Rule__()
-
-                lexemeStart = cursor
-                if(.not. acceptString(")")) cycle
-                expr_0_4 = consumeInput()
-        
-        
-                res = toStr(expr_0_2 )
- 
-
-                    exit
-                
-                case(1)
-                    cursor = savePoint
-                    
-        expr_1_0 = peg_Rule_Integer()
-        
-                res = toStr(expr_1_0 )
- 
-
-                    exit
-                
-                case default
-                peg_continue_parsing = .false.
-
-                call pegError()
-                    
-                         
-                end select
-            end do
-        
-    
-        
-    end function peg_Rule_Factor
-
-
-    function peg_Rule_Integer() result (res)
-        integer :: res
-        character(len=:), allocatable :: expr_0_0
-character(len=:), allocatable :: expr_0_1
 
         integer :: i
         logical :: peg_continue_parsing 
@@ -280,17 +176,16 @@ character(len=:), allocatable :: expr_0_1
                 case(0)
                     cursor = savePoint
                     
-        expr_0_0 = peg_Rule__()
-
+        
                 lexemeStart = cursor
                 if (.not. (acceptRange('0', '9'))) cycle
                 do while (cursor <= len(input))
                     if (.not. ( (acceptRange('0', '9')) )) exit
                 end do
-                expr_0_1 = consumeInput()
+                expr_0_0 = consumeInput()
             
         
-                res = peg_SemanticAction_Integer_f0(expr_0_1 )
+                res = peg_SemanticAction_num_f0(expr_0_0 )
  
 
                     exit
@@ -306,10 +201,10 @@ character(len=:), allocatable :: expr_0_1
         
     
         
-    end function peg_Rule_Integer
+    end function peg_Rule_num
 
 
-    function peg_Rule__() result (res)
+    function peg_Rule_sep() result (res)
         character(len=:), allocatable :: res
         character(len=:), allocatable :: expr_0_0
 
@@ -329,53 +224,7 @@ character(len=:), allocatable :: expr_0_1
                     
         
                 lexemeStart = cursor
-                do while (cursor <= len(input))
-                    if (.not. ( (acceptSet([' ','\t','\n','\r'])) )) exit
-                end do
-                expr_0_0 = consumeInput()
-            
-        
-                res = toStr(expr_0_0 )
- 
-
-                    exit
-                
-                case default
-                peg_continue_parsing = .false.
-
-                call pegError()
-                    
-                         
-                end select
-            end do
-        
-    
-        
-    end function peg_Rule__
-
-
-    function peg_Rule_peg_parentesis_1() result (res)
-        character(len=:), allocatable :: res
-        character(len=:), allocatable :: expr_0_0
-character(len=:), allocatable :: expr_1_0
-
-        integer :: i
-        logical :: peg_continue_parsing 
-
-         
-        savePoint = cursor
-        
-         
-    
-            do i = 0, 2
-                select case(i)
-                
-                case(0)
-                    cursor = savePoint
-                    
-        
-                lexemeStart = cursor
-                if(.not. acceptString("+")) cycle
+                if(.not. acceptString(char(10))) cycle
                 expr_0_0 = consumeInput()
         
         
@@ -384,20 +233,6 @@ character(len=:), allocatable :: expr_1_0
 
                     exit
                 
-                case(1)
-                    cursor = savePoint
-                    
-        
-                lexemeStart = cursor
-                if(.not. acceptString("-")) cycle
-                expr_1_0 = consumeInput()
-        
-        
-                res = toStr(expr_1_0 )
- 
-
-                    exit
-                
                 case default
                 peg_continue_parsing = .false.
 
@@ -409,191 +244,39 @@ character(len=:), allocatable :: expr_1_0
         
     
         
-    end function peg_Rule_peg_parentesis_1
-
-
-    function peg_Rule_peg_parentesis_2() result (res)
-        character(len=:), allocatable :: res
-        character(len=:), allocatable :: expr_0_0
-character(len=:), allocatable :: expr_1_0
-
-        integer :: i
-        logical :: peg_continue_parsing 
-
-         
-        savePoint = cursor
-        
-         
-    
-            do i = 0, 2
-                select case(i)
-                
-                case(0)
-                    cursor = savePoint
-                    
-        
-                lexemeStart = cursor
-                if(.not. acceptString("*")) cycle
-                expr_0_0 = consumeInput()
-        
-        
-                res = toStr(expr_0_0 )
- 
-
-                    exit
-                
-                case(1)
-                    cursor = savePoint
-                    
-        
-                lexemeStart = cursor
-                if(.not. acceptString("/")) cycle
-                expr_1_0 = consumeInput()
-        
-        
-                res = toStr(expr_1_0 )
- 
-
-                    exit
-                
-                case default
-                peg_continue_parsing = .false.
-
-                call pegError()
-                    
-                         
-                end select
-            end do
-        
-    
-        
-    end function peg_Rule_peg_parentesis_2
-
-
-    function peg_Rule_peg_parentesis_3() result (res)
-        type(operation) :: res
-        character(len=:), allocatable :: expr_0_0
-character(len=:), allocatable :: expr_0_1
-character(len=:), allocatable :: expr_0_2
-
-        integer :: i
-        logical :: peg_continue_parsing 
-
-         
-        savePoint = cursor
-        
-         
-    
-            do i = 0, 1
-                select case(i)
-                
-                case(0)
-                    cursor = savePoint
-                    
-        expr_0_0 = peg_Rule_peg_parentesis_2()
-expr_0_1 = peg_Rule__()
-expr_0_2 = peg_Rule_Factor()
-        
-                res = peg_SemanticAction_peg_parentesis_3_f0(expr_0_0 , expr_0_2 )
- 
-
-                    exit
-                
-                case default
-                peg_continue_parsing = .false.
-
-                call pegError()
-                    
-                         
-                end select
-            end do
-        
-    
-        
-    end function peg_Rule_peg_parentesis_3
+    end function peg_Rule_sep
 
 
      
-    function peg_SemanticAction_Expression_f0(head, tail) result(res)
-        integer , dimension(:), intent(in) :: head
-type(operation) , dimension(:), intent(in) :: tail 
+    function peg_SemanticAction_s_f0(n) result(res)
+        integer , dimension(:), intent(in) :: n 
+        type(node), pointer :: res
+        	
+	integer i
+	do i = 1, size(n)
+		call push(n(i))
+	end do
+	res => head
+
+    end function peg_SemanticAction_s_f0
+    
+ 
+    function peg_SemanticAction_e_f0(n) result(res)
+        integer  :: n 
         integer :: res
         
-        integer :: i
+	res = n
 
-        if (size(tail) < 0) then
-            res = head
-            return
-        end if
-
-        do i = 1, size(tail)
-            if (tail(i)%operator == '+') then
-                head = head + tail(i)%operand
-            else
-                head = head - tail(i)%operand
-            end if
-        end do
-
-        res = head
-    
-    end function peg_SemanticAction_Expression_f0
+    end function peg_SemanticAction_e_f0
     
  
-    function peg_SemanticAction_ExpressionTail_f0(operator, operand) result(res)
-        character(len=:), allocatable  :: operator
-integer  :: operand 
-        type(operation) :: res
-        
-
-        res = operation(operator, operand)
-    
-    end function peg_SemanticAction_ExpressionTail_f0
-    
- 
-    function peg_SemanticAction_Term_f0(head, tail) result(res)
-        integer, dimension(:), intent(in) :: head
-        type(operation) , dimension(:), intent(in) :: tail 
+    function peg_SemanticAction_num_f0(n) result(res)
+        character(len=:), allocatable  :: n 
         integer :: res
         
-        integer :: i
+  	read(n, *) res
 
-        if (size(tail) < 0) then
-            res = head
-            return
-        end if
-
-        do i = 1, size(tail)
-            if (tail(i)%operator == '*') then
-                head = head * tail(i)%operand
-            else
-                head = head / tail(i)%operand
-            end if
-        end do
-
-        res = head
-    
-    end function peg_SemanticAction_Term_f0
-    
- 
-    function peg_SemanticAction_Integer_f0(num) result(res)
-        character(len=:), allocatable  :: num 
-        integer :: res
-        
-
-        read(num, *) res
-    
-    end function peg_SemanticAction_Integer_f0
-    
- 
-    function peg_SemanticAction_peg_parentesis_3_f0(operator, operand) result(res)
-        character(len=:), allocatable  :: operator
-character(len=:), allocatable  :: operand 
-        type(operation) :: res
-        
-
-        res = operation(operator, operand)
-    
-    end function peg_SemanticAction_peg_parentesis_3_f0
+    end function peg_SemanticAction_num_f0
     
 
     function acceptString(str) result(accept)
