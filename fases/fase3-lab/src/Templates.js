@@ -64,13 +64,14 @@ module parser
     function acceptSet(set) result(accept)
         character(len=1), dimension(:) :: set
         logical :: accept
-
-        if(.not. (findloc(set, input(cursor:cursor), 1) > 0)) then
+        
+        if (cursor > len(input)) then
             accept = .false.
             return
         end if
-        cursor = cursor + 1
-        accept = .true.
+        
+        accept = any(set == input(cursor:cursor))
+        if (accept) cursor = cursor + 1
     end function acceptSet
 
     function acceptPeriod() result(accept)
