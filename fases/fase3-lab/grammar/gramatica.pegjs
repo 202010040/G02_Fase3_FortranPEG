@@ -1,6 +1,7 @@
 {{
     
-    // let identificadores = []
+    let parentesis_id = 0
+    let reglas_ficticias = [] // array para almacenar reglas ficticias
 
     // import { identificadores } from '../index.js'
 
@@ -24,8 +25,13 @@ gramatica
         errores.push(new ErrorReglas("Regla no encontrada: " + noEncontrados[0]));
     }
     prods[0].start = true;
-    return new n.Grammar(prods, code);
+    
+    // Añadir las reglas ficticias al conjunto de reglas
+    const todas_las_reglas = [...prods, ...reglas_ficticias];
+    
+    return new n.Grammar(todas_las_reglas, code);
   }
+  
 
 globalCode
   = "{" before:$(. !"contains")* [ \t\n\r]* "contains" [ \t\n\r]* after:$[^}]* "}" {
@@ -95,7 +101,17 @@ match
   / val:$literales isCase:"i"? {
     return new n.String(val.replace(/['"]/g, ''), isCase ? true : false);
   }
-  / "(" _ @opciones _ ")"
+  / "(" _ regla_parentesis:opciones _ ")" {
+    parentesis_id += 1;
+    let id_temporal = `peg_parentesis_${parentesis_id}`
+    ids.push(id_temporal);
+    
+    // Crear la regla ficticia y almacenarla
+    const regla_ficticia = new n.Regla(id_temporal, regla_parentesis, '');
+    reglas_ficticias.push(regla_ficticia);
+    
+    return new n.Identificador(id_temporal);
+  }
   / chars:clase isCase:"i"? {
     return new n.Clase(chars, isCase ? true : false);
   }
